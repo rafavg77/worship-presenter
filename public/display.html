@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pantalla de Proyección - Sanación Sin Límites</title>
+  <link rel="stylesheet" href="/css/display.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="theme-cinematic font-size-medium">
+  <!-- Blackout Overlay -->
+  <div id="blackout-layer" class="blackout-layer"></div>
+
+  <!-- Background Layer (Video / Motion) -->
+  <div id="background-layer" class="background-layer">
+    <video id="bg-video" class="bg-video" loop muted playsinline></video>
+    <div id="bg-ambient" class="bg-ambient"></div>
+    <div class="bg-overlay"></div>
+  </div>
+
+  <!-- Content Layer (Lyrics) -->
+  <main id="content-layer" class="content-layer">
+    <div id="slide-container" class="slide-container">
+      <div id="slide-text" class="slide-text"></div>
+    </div>
+  </main>
+
+  <!-- Controls overlay (auto-hides) -->
+  <div id="hud-bar" class="hud-bar">
+    <span class="hud-badge">PROYECCIÓN ACTIVA</span>
+    <button id="btn-fullscreen" class="hud-btn" title="Pantalla Completa (F11)">⛶ Pantalla Completa</button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/display.js"></script>
+</body>
+</html>

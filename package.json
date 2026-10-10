@@ -1,0 +1,28 @@
+{
+  "name": "worship-presenter",
+  "version": "1.0.0",
+  "description": "Sistema de proyección de letras y videos estilo ProPresenter para eventos en vivo",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1",
+    "cors": "^2.8.5",
+    "multer": "^1.4.5-lts.1",
+    "chokidar": "^4.0.3"
+  },
+  "keywords": [
+    "propresenter",
+    "worship",
+    "church",
+    "lyrics",
+    "projection",
+    "secuencias"
+  ],
+  "author": "rafavg77",
+  "license": "MIT"
+}

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de Proyección - Sanación Sin Límites</title>
+  <link rel="stylesheet" href="/css/control.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Top Navigation / ProPresenter Control Header -->
+  <header class="top-nav">
+    <div class="nav-brand">
+      <span class="brand-icon">🕊️</span>
+      <div class="brand-info">
+        <h1>Sanación Sin Límites</h1>
+        <span class="sub-title">Worship Presenter • ProPresenter Web</span>
+      </div>
+    </div>
+
+    <!-- Quick ProPresenter Live Buttons -->
+    <div class="live-actions">
+      <button id="btn-blackout" class="action-btn btn-blackout" title="Pantalla Negra total (Tecla B)">
+        <span class="btn-icon">⬛</span>
+        <span>BLACKOUT</span>
+      </button>
+
+      <button id="btn-clear-text" class="action-btn btn-clear-text" title="Ocultar solo la letra (Tecla C)">
+        <span class="btn-icon">🚫</span>
+        <span>LIMPIAR LETRA</span>
+      </button>
+
+      <div class="nav-divider"></div>
+
+      <button id="btn-prev-slide" class="action-btn btn-nav" title="Diapositiva Anterior (Flecha Izq / RePág)">
+        <span>◀</span> ANTERIOR
+      </button>
+
+      <button id="btn-next-slide" class="action-btn btn-nav btn-primary" title="Siguiente Diapositiva (Espacio / Flecha Der)">
+        SIGUIENTE <span>▶</span>
+      </button>
+    </div>
+
+    <!-- Status & Launch Display -->
+    <div class="nav-right">
+      <div id="display-status-pill" class="status-pill status-disconnected" title="Estado de la pantalla HDMI">
+        <span class="status-dot"></span>
+        <span id="display-status-text">Proyector: 0</span>
+      </div>
+
+      <button id="btn-open-display" class="action-btn btn-accent" title="Abrir ventana de proyección para el proyector HDMI">
+        <span>📽️</span> Pantalla HDMI
+      </button>
+
+      <button id="btn-show-network" class="action-btn btn-ghost" title="Ver URLs y código QR para celular">
+        <span>📱</span> Red / Celular
+      </button>
+    </div>
+  </header>
+
+  <!-- Network IP Modal -->
+  <div id="network-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📱 Conectar desde Celular / Tablet</h3>
+        <button class="modal-close" id="btn-close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Asegúrate de que tu celular esté conectado a la <strong>misma red WiFi</strong> que esta laptop Ubuntu.</p>
+        <div class="ip-list" id="ip-list-container">
+          <!-- IPs populated dynamically -->
+        </div>
+        <p class="modal-tip">💡 <em>Cualquier persona en la misma red WiFi puede abrir esta dirección en su navegador móvil para avanzar o cambiar las canciones.</em></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Song Modal -->
+  <div id="new-song-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-large">
+      <div class="modal-header">
+        <h3>➕ Agregar o Editar Canción</h3>
+        <button class="modal-close" id="btn-close-song-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Título de la Canción:</label>
+            <input type="text" id="input-song-title" placeholder="Ej. Jesucristo Basta">
+          </div>
+          <div class="form-group">
+            <label>Artista / Grupo:</label>
+            <input type="text" id="input-song-artist" placeholder="Ej. Un Corazón">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tonalidad (Key):</label>
+            <input type="text" id="input-song-key" placeholder="Ej. Ab, G, C, D">
+          </div>
+          <div class="form-group">
+            <label>Tempo (BPM):</label>
+            <input type="text" id="input-song-bpm" placeholder="Ej. 69, 72, 130">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Contenido y Diapositivas (usa [Verso 1], [Coro], etc.):</label>
+          <textarea id="input-song-content" rows="12" placeholder="[Verso 1]
+Nuestros corazones insaciables son...
+
+[Coro]
+Jesucristo basta, Jesucristo basta..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button id="btn-save-song" class="action-btn btn-primary">💾 Guardar Canción</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="main-layout">
+    <!-- Left Sidebar: Song Setlist & Videos -->
+    <aside class="sidebar">
+      <div class="sidebar-tabs">
+        <button class="tab-btn active" id="tab-songs-btn">🎵 Repertorio</button>
+        <button class="tab-btn" id="tab-videos-btn">🎬 Videos y Fondo</button>
+        <button class="tab-btn" id="tab-settings-btn">⚙️ Ajustes</button>
+      </div>
+
+      <!-- Tab 1: Canciones -->
+      <div class="tab-panel active" id="tab-songs-panel">
+        <div class="search-box">
+          <input type="text" id="song-search-input" placeholder="🔍 Buscar canción...">
+          <button id="btn-add-song" class="icon-btn" title="Agregar Canción">+</button>
+        </div>
+        <div class="songs-list" id="songs-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Tab 2: Videos -->
+      <div class="tab-panel" id="tab-videos-panel">
+        <div class="video-panel-header">
+          <span>Videos en ./videos y ./songs</span>
+          <button id="btn-clear-video" class="action-btn btn-sm btn-ghost">Quitar Fondo</button>
+        </div>
+        <div class="videos-list" id="videos-list">
+          <!-- Populated by JS -->
+        </div>
+        <div class="upload-box">
+          <label class="upload-label">
+            📁 Subir nuevo video (.mp4/.webm)
+            <input type="file" id="input-file-upload" accept="video/mp4,video/webm,video/quicktime,.txt" style="display:none">
+          </label>
+        </div>
+      </div>
+
+      <!-- Tab 3: Ajustes -->
+      <div class="tab-panel" id="tab-settings-panel">
+        <div class="settings-group">
+          <label class="settings-label">Tamaño de Texto en Proyector:</label>
+          <div class="btn-group">
+            <button class="btn-option font-opt" data-size="small">Chico</button>
+            <button class="btn-option font-opt active" data-size="medium">Medio</button>
+            <button class="btn-option font-opt" data-size="large">Grande</button>
+            <button class="btn-option font-opt" data-size="xlarge">Gigante</button>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <label class="settings-label">Tema Visual del Proyector:</label>
+          <div class="btn-group">
+            <button class="btn-option theme-opt active" data-theme="cinematic">Cinemático</button>
+            <button class="btn-option theme-opt" data-theme="minimal">Negro Puro</button>
+            <button class="btn-option theme-opt" data-theme="blue">Azul Alabanza</button>
+            <button class="btn-option theme-opt" data-theme="warm">Cálido</button>
+          </div>
+        </div>
+
+        <div class="shortcuts-guide">
+          <h4>⌨️ Atajos de Teclado</h4>
+          <ul>
+            <li><kbd>Espacio</kbd> / <kbd>→</kbd> : Siguiente diapositiva</li>
+            <li><kbd>←</kbd> / <kbd>Backspace</kbd> : Diapositiva anterior</li>
+            <li><kbd>B</kbd> : Activar/Desactivar Blackout</li>
+            <li><kbd>C</kbd> : Ocultar/Mostrar texto</li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center Workspace: ProPresenter Slides Grid -->
+    <main class="slides-workspace">
+      <!-- Active Song Banner -->
+      <section class="active-song-header">
+        <div class="song-meta-left">
+          <h2 id="current-song-title">Cargando canciones...</h2>
+          <span id="current-song-artist" class="song-artist">Artista</span>
+        </div>
+        <div class="song-meta-right">
+          <span id="badge-key" class="meta-badge badge-key">Key: -</span>
+          <span id="badge-bpm" class="meta-badge badge-bpm">BPM: -</span>
+          <span id="badge-count" class="meta-badge">0 Diapositivas</span>
+        </div>
+      </section>
+
+      <!-- Slides Grid Area -->
+      <section class="slides-grid-container" id="slides-grid-container">
+        <!-- Rendered dynamically -->
+      </section>
+    </main>
+  </div>
+
+  <!-- Bottom Confidence Monitor / Quick Bar -->
+  <footer class="bottom-bar">
+    <div class="confidence-box live-box">
+      <span class="confidence-label">🔴 EN VIVO (PROYECTANDO):</span>
+      <p id="live-preview-text" class="confidence-text">-</p>
+    </div>
+
+    <div class="confidence-box next-box">
+      <span class="confidence-label">⏭️ A CONTINUACIÓN:</span>
+      <p id="next-preview-text" class="confidence-text">-</p>
+    </div>
+
+    <div class="quick-nav-controls">
+      <button id="btn-quick-prev" class="quick-btn">◀ Anterior</button>
+      <button id="btn-quick-next" class="quick-btn quick-btn-next">Siguiente ▶</button>
+    </div>
+  </footer>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/control.js"></script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+html, body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #000000;
+  font-family: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #ffffff;
+}
+
+/* Background Layer */
+.background-layer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  overflow: hidden;
+  background-color: #000000;
+}
+
+.bg-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+.bg-video.active {
+  opacity: 1;
+}
+
+/* Ambient gradient when no video */
+.bg-ambient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, #1e1b4b 0%, #090d16 60%, #000000 100%);
+  opacity: 1;
+  transition: opacity 0.8s ease;
+}
+
+.bg-ambient.hidden {
+  opacity: 0;
+}
+
+/* Semi-transparent dark vignette to ensure text contrast */
+.bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.65) 100%);
+  pointer-events: none;
+}
+
+/* Content Layer (Lyrics) */
+.content-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4vw 6vw;
+  pointer-events: none;
+}
+
+.slide-container {
+  width: 100%;
+  max-width: 1600px;
+  text-align: center;
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-container.fade-out {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+.slide-container.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Typography for Worship Projection */
+.slide-text {
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  white-space: pre-line;
+  word-break: break-word;
+  color: #ffffff;
+  text-shadow: 
+    0 2px 10px rgba(0, 0, 0, 0.9),
+    0 4px 30px rgba(0, 0, 0, 0.9),
+    0 8px 60px rgba(0, 0, 0, 0.8);
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.8));
+}
+
+/* Responsive Font Sizes */
+body.font-size-small .slide-text {
+  font-size: clamp(2rem, 4.2vw, 4.8rem);
+}
+
+body.font-size-medium .slide-text {
+  font-size: clamp(2.5rem, 5.4vw, 6.2rem);
+}
+
+body.font-size-large .slide-text {
+  font-size: clamp(3rem, 6.6vw, 7.8rem);
+}
+
+body.font-size-xlarge .slide-text {
+  font-size: clamp(3.5rem, 7.8vw, 9.2rem);
+}
+
+/* Themes */
+body.theme-minimal .bg-ambient {
+  background: #000000;
+}
+body.theme-minimal .bg-overlay {
+  background: transparent;
+}
+
+body.theme-blue .bg-ambient {
+  background: radial-gradient(circle at 50% 30%, #1e3a8a 0%, #0f172a 70%, #020617 100%);
+}
+
+body.theme-warm .bg-ambient {
+  background: radial-gradient(circle at 50% 30%, #7c2d12 0%, #311107 70%, #0a0301 100%);
+}
+
+/* Blackout Layer */
+.blackout-layer {
+  position: fixed;
+  inset: 0;
+  background-color: #000000;
+  z-index: 100;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  pointer-events: none;
+}
+
+.blackout-layer.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Floating HUD bar */
+.hud-bar {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+body:hover .hud-bar,
+.hud-bar.visible {
+  opacity: 1;
+}
+
+.hud-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #38bdf8;
+  text-transform: uppercase;
+}
+
+.hud-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #ffffff;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.hud-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
