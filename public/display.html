@@ -13,7 +13,7 @@
   <!-- Blackout Overlay -->
   <div id="blackout-layer" class="blackout-layer"></div>
 
-  <!-- Background Layer (Video / Motion) -->
+  <!-- Background Layer (Video / Motion para letras) -->
   <div id="background-layer" class="background-layer">
     <video id="bg-video" class="bg-video" loop muted playsinline></video>
     <div id="bg-ambient" class="bg-ambient"></div>
@@ -27,9 +27,19 @@
     </div>
   </main>
 
+  <!-- Foreground Video Layer (Video completo con audio sin letras) -->
+  <div id="fg-video-container" class="fg-video-container hidden">
+    <video id="fg-video" class="fg-video" playsinline></video>
+  </div>
+
+  <!-- Audio unlock notice if needed -->
+  <div id="audio-unlock-banner" class="audio-unlock-banner hidden">
+    <span>🔊 Haz clic aquí para activar el audio del proyector</span>
+  </div>
+
   <!-- Controls overlay (auto-hides) -->
   <div id="hud-bar" class="hud-bar">
-    <span class="hud-badge">PROYECCIÓN ACTIVA</span>
+    <span class="hud-badge" id="hud-status">PROYECCIÓN ACTIVA</span>
     <button id="btn-fullscreen" class="hud-btn" title="Pantalla Completa (F11)">⛶ Pantalla Completa</button>
   </div>
 

@@ -44,7 +44,6 @@ const storage = multer.diskStorage({
     }
   },
   filename: (req, file, cb) => {
-    // Sanitize filename
     const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
     cb(null, safeName);
   }
@@ -72,7 +71,6 @@ function parseSongFile(filepath) {
   const id = path.parse(filename).name;
 
   let title = id.replace(/^[0-9]+[-_]?/, '').replace(/[-_]/g, ' ');
-  // Capitalize title
   title = title.replace(/\b\w/g, l => l.toUpperCase());
   let artist = '';
   let key = '';
@@ -88,7 +86,6 @@ function parseSongFile(filepath) {
     const rawLine = lines[i];
     const line = rawLine.trim();
 
-    // Parse header fields if at top
     if (!headerFinished) {
       if (/^title:\s*/i.test(line)) {
         title = line.replace(/^title:\s*/i, '').trim();
@@ -108,7 +105,6 @@ function parseSongFile(filepath) {
       }
     }
 
-    // Section header e.g. [Verso 1] or [Coro]
     const sectionMatch = line.match(/^\[(.*?)\]$/);
     if (sectionMatch) {
       headerFinished = true;
@@ -124,7 +120,6 @@ function parseSongFile(filepath) {
       continue;
     }
 
-    // Blank line might separate slides if not marked with [Section]
     if (line === '') {
       if (currentLines.length > 0) {
         slides.push({
@@ -141,7 +136,6 @@ function parseSongFile(filepath) {
     currentLines.push(rawLine);
   }
 
-  // Push last slide
   if (currentLines.length > 0) {
     slides.push({
       id: `${id}-s${slides.length + 1}`,
@@ -207,16 +201,27 @@ function getVideosList() {
 
 // ProPresenter global state
 let presenterState = {
+  mediaMode: 'lyrics', // 'lyrics' | 'video'
   currentSongId: null,
   currentSong: null,
   currentSlideIndex: -1,
   isBlackout: false,
   isTextCleared: false,
-  currentVideo: null,
+  currentVideo: null, // background video loop
   videoPlaying: true,
   videoMuted: true,
+  foregroundVideo: { // foreground video with sound and no lyrics
+    url: null,
+    filename: null,
+    playing: false,
+    volume: 1.0,
+    muted: false,
+    currentTime: 0,
+    duration: 0,
+    loop: false
+  },
   theme: 'cinematic',
-  fontSize: 'medium', // small, medium, large, xlarge
+  fontSize: 'medium',
   connectedDisplays: 0,
   connectedOperators: 0
 };
@@ -275,7 +280,6 @@ function broadcastLibraryUpdate() {
   const songs = getSongsList();
   const videos = getVideosList();
   
-  // Refresh current song reference if updated
   if (presenterState.currentSongId) {
     const updated = songs.find(s => s.id === presenterState.currentSongId);
     if (updated) presenterState.currentSong = updated;
@@ -289,7 +293,7 @@ function broadcastState() {
   io.emit('state-changed', presenterState);
 }
 
-// Watchers for automatic hot-reloading of folder content
+// Watchers for automatic hot-reloading
 const watcher = chokidar.watch([SONGS_DIR, VIDEOS_DIR], {
   ignoreInitial: true,
   awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 }
@@ -307,7 +311,7 @@ io.on('connection', (socket) => {
     presenterState.connectedOperators++;
   }
 
-  // Send current state and library to newly connected client
+  // Send current state and library
   socket.emit('init', {
     state: presenterState,
     songs: getSongsList(),
@@ -315,17 +319,17 @@ io.on('connection', (socket) => {
     ips: getLocalIpAddresses()
   });
 
-  // Notify all operators of display count
   io.emit('displays-count', {
     displays: presenterState.connectedDisplays,
     operators: presenterState.connectedOperators
   });
 
-  // Select song
+  // Select song (switches back to lyrics mode)
   socket.on('select-song', (data) => {
     const songs = getSongsList();
     const song = songs.find(s => s.id === data.songId);
     if (song) {
+      presenterState.mediaMode = 'lyrics';
       presenterState.currentSongId = song.id;
       presenterState.currentSong = song;
       presenterState.currentSlideIndex = typeof data.slideIndex === 'number' ? data.slideIndex : 0;
@@ -337,6 +341,7 @@ io.on('connection', (socket) => {
   // Jump to specific slide
   socket.on('go-to-slide', (data) => {
     if (!presenterState.currentSong) return;
+    presenterState.mediaMode = 'lyrics';
     const maxIdx = presenterState.currentSong.slides.length - 1;
     let idx = parseInt(data.index, 10);
     if (isNaN(idx)) idx = 0;
@@ -350,6 +355,7 @@ io.on('connection', (socket) => {
 
   // Next slide
   socket.on('next-slide', () => {
+    if (presenterState.mediaMode === 'video') return;
     if (!presenterState.currentSong) return;
     const slides = presenterState.currentSong.slides;
     if (presenterState.currentSlideIndex < slides.length - 1) {
@@ -361,6 +367,7 @@ io.on('connection', (socket) => {
 
   // Previous slide
   socket.on('prev-slide', () => {
+    if (presenterState.mediaMode === 'video') return;
     if (!presenterState.currentSong) return;
     if (presenterState.currentSlideIndex > 0) {
       presenterState.currentSlideIndex--;
@@ -369,26 +376,25 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Blackout toggle / set
+  // Blackout
   socket.on('toggle-blackout', (val) => {
     presenterState.isBlackout = typeof val === 'boolean' ? val : !presenterState.isBlackout;
     broadcastState();
   });
 
-  // Clear text toggle / set
+  // Clear text
   socket.on('toggle-clear-text', (val) => {
     presenterState.isTextCleared = typeof val === 'boolean' ? val : !presenterState.isTextCleared;
     broadcastState();
   });
 
-  // Select video
+  // Select background video (loop, silent behind lyrics)
   socket.on('select-video', (data) => {
     presenterState.currentVideo = data.url || null;
     presenterState.videoPlaying = true;
     broadcastState();
   });
 
-  // Control video (play, pause, stop, toggle)
   socket.on('video-control', (action) => {
     if (action === 'toggle') {
       presenterState.videoPlaying = !presenterState.videoPlaying;
@@ -402,6 +408,62 @@ io.on('connection', (socket) => {
       presenterState.videoMuted = !presenterState.videoMuted;
     }
     broadcastState();
+  });
+
+  // === FOREGROUND VIDEO WITH AUDIO (SIN LETRA) ===
+  socket.on('play-foreground-video', (data) => {
+    presenterState.mediaMode = 'video';
+    presenterState.foregroundVideo.url = data.url;
+    presenterState.foregroundVideo.filename = data.filename || path.basename(data.url);
+    presenterState.foregroundVideo.playing = true;
+    presenterState.foregroundVideo.volume = typeof data.volume === 'number' ? data.volume : 1.0;
+    presenterState.foregroundVideo.muted = false;
+    presenterState.foregroundVideo.currentTime = 0;
+    presenterState.foregroundVideo.loop = !!data.loop;
+    broadcastState();
+  });
+
+  socket.on('stop-foreground-video', () => {
+    presenterState.mediaMode = 'lyrics';
+    presenterState.foregroundVideo.playing = false;
+    presenterState.foregroundVideo.url = null;
+    broadcastState();
+  });
+
+  socket.on('control-foreground-video', (data) => {
+    if (data.action === 'play') {
+      presenterState.foregroundVideo.playing = true;
+    } else if (data.action === 'pause') {
+      presenterState.foregroundVideo.playing = false;
+    } else if (data.action === 'toggle') {
+      presenterState.foregroundVideo.playing = !presenterState.foregroundVideo.playing;
+    } else if (data.action === 'volume') {
+      presenterState.foregroundVideo.volume = data.value;
+      presenterState.foregroundVideo.muted = false;
+    } else if (data.action === 'mute-toggle') {
+      presenterState.foregroundVideo.muted = !presenterState.foregroundVideo.muted;
+    } else if (data.action === 'loop-toggle') {
+      presenterState.foregroundVideo.loop = !presenterState.foregroundVideo.loop;
+    } else if (data.action === 'seek') {
+      presenterState.foregroundVideo.currentTime = data.value;
+      io.emit('seek-foreground-video', { time: data.value });
+    }
+    broadcastState();
+  });
+
+  // Time sync from projector display
+  socket.on('sync-video-time', (data) => {
+    presenterState.foregroundVideo.currentTime = data.currentTime;
+    presenterState.foregroundVideo.duration = data.duration;
+    io.emit('video-time-update', data);
+  });
+
+  socket.on('foreground-video-ended', () => {
+    if (!presenterState.foregroundVideo.loop) {
+      presenterState.mediaMode = 'lyrics';
+      presenterState.foregroundVideo.playing = false;
+      broadcastState();
+    }
   });
 
   // Visual styling
@@ -428,12 +490,10 @@ io.on('connection', (socket) => {
   });
 });
 
-// Direct route for display
 app.get('/display', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'display.html'));
 });
 
-// Start listening on 0.0.0.0
 server.listen(PORT, '0.0.0.0', () => {
   const ips = getLocalIpAddresses();
   console.log('\n================================================================');

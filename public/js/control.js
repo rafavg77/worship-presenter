@@ -8,6 +8,7 @@ let appState = null;
 let songsList = [];
 let videosList = [];
 let networkIps = [];
+let isUserSeeking = false;
 
 // DOM Elements
 const btnBlackout = document.getElementById('btn-blackout');
@@ -23,6 +24,24 @@ const networkModal = document.getElementById('network-modal');
 const ipListContainer = document.getElementById('ip-list-container');
 const displayStatusPill = document.getElementById('display-status-pill');
 const displayStatusText = document.getElementById('display-status-text');
+const videoModePill = document.getElementById('video-mode-pill');
+
+// Foreground Video Deck
+const videoPlaybackDeck = document.getElementById('video-playback-deck');
+const activeSongHeader = document.getElementById('active-song-header');
+const fgDeckFilename = document.getElementById('fg-deck-filename');
+const btnFgStop = document.getElementById('btn-fg-stop');
+const btnFgPlayPause = document.getElementById('btn-fg-play-pause');
+const fgPlayIcon = document.getElementById('fg-play-icon');
+const fgPlayText = document.getElementById('fg-play-text');
+const btnFgRestart = document.getElementById('btn-fg-restart');
+const btnFgLoop = document.getElementById('btn-fg-loop');
+const fgSeeker = document.getElementById('fg-seeker');
+const fgTimeCurrent = document.getElementById('fg-time-current');
+const fgTimeTotal = document.getElementById('fg-time-total');
+const btnFgMute = document.getElementById('btn-fg-mute');
+const fgVolume = document.getElementById('fg-volume');
+const fgVolumeLabel = document.getElementById('fg-volume-label');
 
 // Modals
 const newSongModal = document.getElementById('new-song-modal');
@@ -136,7 +155,7 @@ function renderNetworkIps() {
     const hint = document.createElement('div');
     hint.style.fontSize = '0.85rem';
     hint.style.color = '#cbd5e1';
-    hint.innerText = 'Laptop no conectada a una red WiFi aún. Conéctate a la red local de la iglesia.';
+    hint.innerText = 'Laptop no conectada a una red WiFi aún. Conéctate a la red local.';
     ipListContainer.appendChild(hint);
   }
 }
@@ -148,6 +167,62 @@ btnPrevSlide.addEventListener('click', () => socket.emit('prev-slide'));
 btnNextSlide.addEventListener('click', () => socket.emit('next-slide'));
 btnQuickPrev.addEventListener('click', () => socket.emit('prev-slide'));
 btnQuickNext.addEventListener('click', () => socket.emit('next-slide'));
+
+// Foreground Video Controls
+btnFgStop.addEventListener('click', () => {
+  socket.emit('stop-foreground-video');
+});
+
+btnFgPlayPause.addEventListener('click', () => {
+  socket.emit('control-foreground-video', { action: 'toggle' });
+});
+
+btnFgRestart.addEventListener('click', () => {
+  socket.emit('control-foreground-video', { action: 'seek', value: 0 });
+});
+
+btnFgLoop.addEventListener('click', () => {
+  socket.emit('control-foreground-video', { action: 'loop-toggle' });
+});
+
+btnFgMute.addEventListener('click', () => {
+  socket.emit('control-foreground-video', { action: 'mute-toggle' });
+});
+
+fgVolume.addEventListener('input', (e) => {
+  const val = parseFloat(e.target.value);
+  fgVolumeLabel.innerText = `${Math.round(val * 100)}%`;
+  socket.emit('control-foreground-video', { action: 'volume', value: val });
+});
+
+fgSeeker.addEventListener('mousedown', () => { isUserSeeking = true; });
+fgSeeker.addEventListener('touchstart', () => { isUserSeeking = true; });
+fgSeeker.addEventListener('change', (e) => {
+  isUserSeeking = false;
+  socket.emit('control-foreground-video', { action: 'seek', value: parseFloat(e.target.value) });
+});
+fgSeeker.addEventListener('mouseup', () => { isUserSeeking = false; });
+fgSeeker.addEventListener('touchend', () => { isUserSeeking = false; });
+
+// Format seconds to mm:ss
+function formatTime(sec) {
+  if (isNaN(sec) || sec < 0) return '00:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+// Socket: Video time progress from display
+socket.on('video-time-update', (data) => {
+  if (appState && appState.mediaMode === 'video') {
+    if (!isUserSeeking && data.duration > 0) {
+      fgSeeker.max = data.duration;
+      fgSeeker.value = data.currentTime;
+    }
+    fgTimeCurrent.innerText = formatTime(data.currentTime);
+    fgTimeTotal.innerText = formatTime(data.duration);
+  }
+});
 
 // Keyboard Shortcuts
 window.addEventListener('keydown', (e) => {
@@ -190,7 +265,33 @@ function updateUI(state) {
     btnClearText.innerHTML = '<span class="btn-icon">🚫</span> <span>LIMPIAR LETRA</span>';
   }
 
-  // 2. Active Song Info
+  // 2. FOREGROUND VIDEO WITH AUDIO (SIN LETRA)
+  if (state.mediaMode === 'video' && state.foregroundVideo && state.foregroundVideo.url) {
+    videoModePill.classList.remove('hidden');
+    videoPlaybackDeck.classList.remove('hidden');
+    fgDeckFilename.innerText = state.foregroundVideo.filename || 'video.mp4';
+
+    if (state.foregroundVideo.playing) {
+      fgPlayIcon.innerText = '⏸';
+      fgPlayText.innerText = 'Pausar';
+    } else {
+      fgPlayIcon.innerText = '▶';
+      fgPlayText.innerText = 'Reproducir';
+    }
+
+    btnFgLoop.innerText = state.foregroundVideo.loop ? '🔁 Repetir: Sí' : '🔁 Repetir: No';
+    btnFgMute.innerText = state.foregroundVideo.muted ? '🔇' : '🔊';
+    fgVolume.value = state.foregroundVideo.volume;
+    fgVolumeLabel.innerText = `${Math.round(state.foregroundVideo.volume * 100)}%`;
+
+    livePreviewText.innerText = `🎬 [VIDEO CON AUDIO EN VIVO] ${state.foregroundVideo.filename || ''}`;
+    nextPreviewText.innerText = 'Presiona "⏹ Detener y Volver a Letras" para reanudar canciones';
+  } else {
+    videoModePill.classList.add('hidden');
+    videoPlaybackDeck.classList.add('hidden');
+  }
+
+  // 3. Active Song Info
   if (state.currentSong) {
     currentSongTitle.innerText = state.currentSong.title || 'Canción sin título';
     currentSongArtist.innerText = state.currentSong.artist || 'Sin artista';
@@ -205,52 +306,55 @@ function updateUI(state) {
     badgeCount.innerText = '0 Diapositivas';
   }
 
-  // 3. Render Slides Grid
+  // 4. Render Slides Grid
   renderSlideCards(state.currentSong, state.currentSlideIndex);
 
-  // 4. Update Confidence / Bottom Bar
-  let liveText = '— Pantalla Vacía —';
-  let nextText = '— Fin de Canción —';
+  // 5. Update Confidence / Bottom Bar if not in video mode
+  if (state.mediaMode !== 'video') {
+    let liveText = '— Pantalla Vacía —';
+    let nextText = '— Fin de Canción —';
 
-  if (state.isBlackout) {
-    liveText = '⬛ EN BLACKOUT (PANTALLA NEGRA)';
-  } else if (state.isTextCleared) {
-    liveText = '🚫 LETRA OCULTA (SOLO FONDO)';
-  } else if (state.currentSong && state.currentSong.slides && state.currentSlideIndex >= 0) {
-    const curSlide = state.currentSong.slides[state.currentSlideIndex];
-    if (curSlide) {
-      liveText = `[${curSlide.label}] ${curSlide.text.replace(/\n/g, ' / ')}`;
-    }
-  }
-
-  if (state.currentSong && state.currentSong.slides) {
-    const nextIdx = state.currentSlideIndex + 1;
-    if (nextIdx < state.currentSong.slides.length) {
-      const nextSlide = state.currentSong.slides[nextIdx];
-      if (nextSlide) {
-        nextText = `[${nextSlide.label}] ${nextSlide.text.replace(/\n/g, ' / ')}`;
+    if (state.isBlackout) {
+      liveText = '⬛ EN BLACKOUT (PANTALLA NEGRA)';
+    } else if (state.isTextCleared) {
+      liveText = '🚫 LETRA OCULTA (SOLO FONDO)';
+    } else if (state.currentSong && state.currentSong.slides && state.currentSlideIndex >= 0) {
+      const curSlide = state.currentSong.slides[state.currentSlideIndex];
+      if (curSlide) {
+        liveText = `[${curSlide.label}] ${curSlide.text.replace(/\n/g, ' / ')}`;
       }
     }
+
+    if (state.currentSong && state.currentSong.slides) {
+      const nextIdx = state.currentSlideIndex + 1;
+      if (nextIdx < state.currentSong.slides.length) {
+        const nextSlide = state.currentSong.slides[nextIdx];
+        if (nextSlide) {
+          nextText = `[${nextSlide.label}] ${nextSlide.text.replace(/\n/g, ' / ')}`;
+        }
+      }
+    }
+
+    livePreviewText.innerText = liveText;
+    nextPreviewText.innerText = nextText;
   }
 
-  livePreviewText.innerText = liveText;
-  nextPreviewText.innerText = nextText;
-
-  // 5. Highlight active song in sidebar
+  // 6. Highlight active song in sidebar
   document.querySelectorAll('.song-item').forEach(item => {
-    if (item.dataset.id === state.currentSongId) {
+    if (state.mediaMode !== 'video' && item.dataset.id === state.currentSongId) {
       item.classList.add('active');
     } else {
       item.classList.remove('active');
     }
   });
 
-  // 6. Highlight active video in sidebar
-  document.querySelectorAll('.video-item').forEach(item => {
-    if (state.currentVideo && item.dataset.url === state.currentVideo) {
-      item.classList.add('active');
-    } else {
-      item.classList.remove('active');
+  // 7. Highlight active video in sidebar
+  document.querySelectorAll('.video-card-item').forEach(item => {
+    item.classList.remove('active-fg', 'active-bg');
+    if (state.mediaMode === 'video' && state.foregroundVideo && item.dataset.url === state.foregroundVideo.url) {
+      item.classList.add('active-fg');
+    } else if (state.currentVideo && item.dataset.url === state.currentVideo) {
+      item.classList.add('active-bg');
     }
   });
 }
@@ -265,18 +369,16 @@ function renderSlideCards(song, activeIndex) {
   slidesGridContainer.innerHTML = '';
   song.slides.forEach((slide, idx) => {
     const card = document.createElement('div');
-    card.className = `slide-card ${idx === activeIndex ? 'active' : ''}`;
+    const isLive = appState && appState.mediaMode !== 'video' && idx === activeIndex;
+    card.className = `slide-card ${isLive ? 'active' : ''}`;
     card.dataset.index = idx;
 
-    // Tag color class
     let tagClass = 'tag-default';
     const lbl = (slide.label || '').toLowerCase();
     if (lbl.includes('verso')) tagClass = 'tag-verso';
     else if (lbl.includes('coro')) tagClass = 'tag-coro';
     else if (lbl.includes('puente')) tagClass = 'tag-puente';
     else if (lbl.includes('pre-coro') || lbl.includes('precoro')) tagClass = 'tag-pre-coro';
-
-    const isLive = idx === activeIndex;
 
     card.innerHTML = `
       ${isLive ? '<span class="live-indicator-badge">EN VIVO</span>' : ''}
@@ -294,7 +396,6 @@ function renderSlideCards(song, activeIndex) {
     slidesGridContainer.appendChild(card);
   });
 
-  // Scroll active slide into view smoothly
   const activeCard = slidesGridContainer.querySelector('.slide-card.active');
   if (activeCard) {
     activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -318,7 +419,7 @@ function renderSongsList(songs) {
 
   filtered.forEach(song => {
     const item = document.createElement('div');
-    item.className = `song-item ${appState && appState.currentSongId === song.id ? 'active' : ''}`;
+    item.className = `song-item ${appState && appState.mediaMode !== 'video' && appState.currentSongId === song.id ? 'active' : ''}`;
     item.dataset.id = song.id;
 
     item.innerHTML = `
@@ -341,7 +442,7 @@ function renderSongsList(songs) {
 
 songSearchInput.addEventListener('input', () => renderSongsList(songsList));
 
-// Render Videos List
+// Render Videos List with 2 Options: Standalone Video with Audio vs Background Loop
 function renderVideosList(videos) {
   videosListContainer.innerHTML = '';
   if (!videos || videos.length === 0) {
@@ -351,15 +452,32 @@ function renderVideosList(videos) {
 
   videos.forEach(v => {
     const item = document.createElement('div');
-    item.className = `video-item ${appState && appState.currentVideo === v.url ? 'active' : ''}`;
+    item.className = 'video-card-item';
     item.dataset.url = v.url;
 
     item.innerHTML = `
-      <span class="video-icon">🎬</span>
-      <span class="video-name" title="${escapeHtml(v.filename)}">${escapeHtml(v.filename)}</span>
+      <div class="video-card-title" title="${escapeHtml(v.filename)}">
+        <span>🎬</span> <span>${escapeHtml(v.filename)}</span>
+      </div>
+      <div class="video-card-actions">
+        <button class="btn-video-audio" title="Proyectar solo este video con su audio y sin letra">
+          ▶ Con Audio (Sin Letra)
+        </button>
+        <button class="btn-video-bg" title="Usar como fondo en bucle detrás de las letras">
+          🖼️ Fondo
+        </button>
+      </div>
     `;
 
-    item.addEventListener('click', () => {
+    // Button: Play standalone with audio (no lyrics)
+    item.querySelector('.btn-video-audio').addEventListener('click', (e) => {
+      e.stopPropagation();
+      socket.emit('play-foreground-video', { url: v.url, filename: v.filename });
+    });
+
+    // Button: Set as background loop
+    item.querySelector('.btn-video-bg').addEventListener('click', (e) => {
+      e.stopPropagation();
       socket.emit('select-video', { url: v.url });
     });
 

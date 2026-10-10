@@ -45,6 +45,11 @@
 
     <!-- Status & Launch Display -->
     <div class="nav-right">
+      <div id="video-mode-pill" class="status-pill status-video-active hidden" title="Hay un video proyectándose con audio">
+        <span>🎬</span>
+        <span>VIDEO CON AUDIO</span>
+      </div>
+
       <div id="display-status-pill" class="status-pill status-disconnected" title="Estado de la pantalla HDMI">
         <span class="status-dot"></span>
         <span id="display-status-text">Proyector: 0</span>
@@ -126,7 +131,7 @@ Jesucristo basta, Jesucristo basta..."></textarea>
     <aside class="sidebar">
       <div class="sidebar-tabs">
         <button class="tab-btn active" id="tab-songs-btn">🎵 Repertorio</button>
-        <button class="tab-btn" id="tab-videos-btn">🎬 Videos y Fondo</button>
+        <button class="tab-btn" id="tab-videos-btn">🎬 Videos y Medios</button>
         <button class="tab-btn" id="tab-settings-btn">⚙️ Ajustes</button>
       </div>
 
@@ -141,15 +146,17 @@ Jesucristo basta, Jesucristo basta..."></textarea>
         </div>
       </div>
 
-      <!-- Tab 2: Videos -->
+      <!-- Tab 2: Videos & Medios -->
       <div class="tab-panel" id="tab-videos-panel">
         <div class="video-panel-header">
-          <span>Videos en ./videos y ./songs</span>
-          <button id="btn-clear-video" class="action-btn btn-sm btn-ghost">Quitar Fondo</button>
+          <span>VIDEOS EN CARPETAS</span>
+          <button id="btn-clear-video" class="action-btn btn-sm btn-ghost" title="Quitar fondo en bucle">Quitar Fondo</button>
         </div>
+        
         <div class="videos-list" id="videos-list">
           <!-- Populated by JS -->
         </div>
+
         <div class="upload-box">
           <label class="upload-label">
             📁 Subir nuevo video (.mp4/.webm)
@@ -192,10 +199,10 @@ Jesucristo basta, Jesucristo basta..."></textarea>
       </div>
     </aside>
 
-    <!-- Center Workspace: ProPresenter Slides Grid -->
+    <!-- Center Workspace: ProPresenter Slides Grid & Video Playback Deck -->
     <main class="slides-workspace">
       <!-- Active Song Banner -->
-      <section class="active-song-header">
+      <section class="active-song-header" id="active-song-header">
         <div class="song-meta-left">
           <h2 id="current-song-title">Cargando canciones...</h2>
           <span id="current-song-artist" class="song-artist">Artista</span>
@@ -204,6 +211,47 @@ Jesucristo basta, Jesucristo basta..."></textarea>
           <span id="badge-key" class="meta-badge badge-key">Key: -</span>
           <span id="badge-bpm" class="meta-badge badge-bpm">BPM: -</span>
           <span id="badge-count" class="meta-badge">0 Diapositivas</span>
+        </div>
+      </section>
+
+      <!-- Video Player Control Deck (Shown when projecting standalone video with audio) -->
+      <section class="video-playback-deck hidden" id="video-playback-deck">
+        <div class="deck-header">
+          <div class="deck-title-box">
+            <span class="deck-badge">🎬 PROYECTANDO VIDEO CON AUDIO</span>
+            <h3 id="fg-deck-filename" class="deck-filename">video.mp4</h3>
+          </div>
+          <button id="btn-fg-stop" class="action-btn btn-danger-dark">
+            ⏹ Detener y Volver a Letras
+          </button>
+        </div>
+
+        <div class="deck-controls">
+          <div class="deck-time-row">
+            <span id="fg-time-current" class="time-label">00:00</span>
+            <input type="range" id="fg-seeker" class="deck-seeker" min="0" max="100" value="0" step="0.1">
+            <span id="fg-time-total" class="time-label">00:00</span>
+          </div>
+
+          <div class="deck-buttons-row">
+            <button id="btn-fg-play-pause" class="deck-btn-play">
+              <span id="fg-play-icon">⏸</span> <span id="fg-play-text">Pausar</span>
+            </button>
+
+            <button id="btn-fg-restart" class="action-btn btn-ghost" title="Reiniciar desde el inicio">
+              ⏮ Reiniciar
+            </button>
+
+            <button id="btn-fg-loop" class="action-btn btn-ghost" title="Repetir en bucle">
+              🔁 Repetir: No
+            </button>
+
+            <div class="deck-volume-box">
+              <button id="btn-fg-mute" class="action-btn btn-sm btn-ghost">🔊</button>
+              <input type="range" id="fg-volume" class="deck-volume-slider" min="0" max="1" step="0.05" value="1">
+              <span id="fg-volume-label" class="volume-label">100%</span>
+            </div>
+          </div>
         </div>
       </section>
 

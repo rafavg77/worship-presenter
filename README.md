@@ -107,10 +107,18 @@ Otra línea del coro
 Línea del puente
 ```
 
-### 🎬 Carpeta de Videos (`./videos/`)
-- Coloca cualquier archivo de video en formato `.mp4` o `.webm` dentro de la carpeta `videos/` o súbelo directamente desde la pestaña **`🎬 Videos y Fondo`**.
-- La aplicación ya incluye fondos de movimiento suaves preconfigurados (`fondo_worship_azul.mp4` y `fondo_worship_calido.mp4`).
-- Al seleccionar un video, se reproduce en bucle continuo de fondo detrás de las letras en el proyector.
+### 🎬 Carpeta de Videos (`./videos/`) y Modos de Proyección
+Coloca cualquier archivo de video en formato `.mp4` o `.webm` dentro de la carpeta `videos/` o súbelo directamente desde la pestaña **`🎬 Videos y Medios`**.
+
+El sistema soporta **dos modos de video**:
+1. **▶ Proyectar con Audio (Sin Letra / Primer Plano)**:
+   - Proyecta el video completo con su pista de audio sonando por las bocinas/HDMI.
+   - Oculta automáticamente cualquier letra de canción.
+   - Abre un reproductor en el panel con barra de progreso interactiva (`00:00 / 02:30`), control de volumen, pausa/reproducir y repetición en bucle.
+   - Al terminar el video o presionar **`⏹ Detener y Volver a Letras`**, el sistema regresa inmediatamente a la proyección de la canción.
+2. **🖼️ Usar como Fondo en Bucle (Sin Audio)**:
+   - Reproduce el video de fondo en bucle continuo de manera silenciosa mientras se proyectan las letras de alabanza.
+   - Ya incluye fondos worship de movimiento (`fondo_worship_azul.mp4` y `fondo_worship_calido.mp4`).
 
 ---
 
