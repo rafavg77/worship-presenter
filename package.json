@@ -1,19 +1,22 @@
 {
   "name": "worship-presenter",
-  "version": "1.0.0",
-  "description": "Sistema de proyección de letras y videos estilo ProPresenter para eventos en vivo",
+  "version": "1.1.0",
+  "description": "Sistema de proyección de letras y videos estilo ProPresenter para eventos en vivo con túnel Cloudflare",
   "main": "server.js",
   "type": "module",
   "scripts": {
     "start": "node server.js",
+    "start:tunnel": "node server.js --tunnel",
+    "tunnel": "node server.js --tunnel",
     "dev": "node --watch server.js"
   },
   "dependencies": {
-    "express": "^4.21.2",
-    "socket.io": "^4.8.1",
+    "chokidar": "^4.0.3",
     "cors": "^2.8.5",
+    "express": "^4.21.2",
     "multer": "^1.4.5-lts.1",
-    "chokidar": "^4.0.3"
+    "socket.io": "^4.8.1",
+    "untun": "^0.2.2"
   },
   "keywords": [
     "propresenter",
@@ -21,7 +24,8 @@
     "church",
     "lyrics",
     "projection",
-    "secuencias"
+    "cloudflare",
+    "tunnel"
   ],
   "author": "rafavg77",
   "license": "MIT"

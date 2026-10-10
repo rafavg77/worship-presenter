@@ -8,6 +8,7 @@ import cors from 'cors';
 import multer from 'multer';
 import chokidar from 'chokidar';
 import { fileURLToPath } from 'url';
+import { startTunnel } from 'untun';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,6 +33,49 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/videos', express.static(VIDEOS_DIR));
 app.use('/songs-media', express.static(SONGS_DIR));
+
+// Cloudflare Tunnel State
+let tunnelInstance = null;
+let tunnelUrl = null;
+let isTunnelStarting = false;
+
+async function startCloudflareTunnel() {
+  if (tunnelUrl) return tunnelUrl;
+  if (isTunnelStarting) return null;
+  isTunnelStarting = true;
+  try {
+    console.log('\n 🚀 Conectando Túnel Cloudflare...');
+    tunnelInstance = await startTunnel({
+      port: PORT,
+      acceptCloudflareNotice: true
+    });
+    tunnelUrl = await tunnelInstance.getURL();
+    isTunnelStarting = false;
+    console.log('\n================================================================');
+    console.log(' 🌐 TÚNEL CLOUDFLARE PÚBLICO ACTIVO:');
+    console.log(` 👉 ${tunnelUrl}`);
+    console.log(' (Cualquier persona puede abrir este enlace desde 4G/WiFi)');
+    console.log('================================================================\n');
+    io.emit('tunnel-status', { tunnelUrl, active: true });
+    return tunnelUrl;
+  } catch (err) {
+    isTunnelStarting = false;
+    console.error('Error al iniciar el túnel de Cloudflare:', err.message);
+    throw err;
+  }
+}
+
+async function stopCloudflareTunnel() {
+  if (tunnelInstance) {
+    try {
+      await tunnelInstance.close();
+    } catch (e) {}
+    tunnelInstance = null;
+  }
+  tunnelUrl = null;
+  isTunnelStarting = false;
+  io.emit('tunnel-status', { tunnelUrl: null, active: false });
+}
 
 // Configure multer for uploads
 const storage = multer.diskStorage({
@@ -207,10 +251,10 @@ let presenterState = {
   currentSlideIndex: -1,
   isBlackout: false,
   isTextCleared: false,
-  currentVideo: null, // background video loop
+  currentVideo: null,
   videoPlaying: true,
   videoMuted: true,
-  foregroundVideo: { // foreground video with sound and no lyrics
+  foregroundVideo: {
     url: null,
     filename: null,
     playing: false,
@@ -243,8 +287,32 @@ app.get('/api/status', (req, res) => {
   res.json({
     state: presenterState,
     ips: getLocalIpAddresses(),
-    port: PORT
+    port: PORT,
+    tunnelUrl,
+    isTunnelStarting
   });
+});
+
+app.get('/api/tunnel', (req, res) => {
+  res.json({
+    active: !!tunnelUrl,
+    tunnelUrl,
+    isStarting: isTunnelStarting
+  });
+});
+
+app.post('/api/tunnel/start', async (req, res) => {
+  try {
+    const url = await startCloudflareTunnel();
+    res.json({ success: true, tunnelUrl: url });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/tunnel/stop', async (req, res) => {
+  await stopCloudflareTunnel();
+  res.json({ success: true });
 });
 
 app.get('/api/songs', (req, res) => {
@@ -311,12 +379,13 @@ io.on('connection', (socket) => {
     presenterState.connectedOperators++;
   }
 
-  // Send current state and library
+  // Send current state, library, and tunnel url
   socket.emit('init', {
     state: presenterState,
     songs: getSongsList(),
     videos: getVideosList(),
-    ips: getLocalIpAddresses()
+    ips: getLocalIpAddresses(),
+    tunnelUrl
   });
 
   io.emit('displays-count', {
@@ -324,7 +393,7 @@ io.on('connection', (socket) => {
     operators: presenterState.connectedOperators
   });
 
-  // Select song (switches back to lyrics mode)
+  // Select song
   socket.on('select-song', (data) => {
     const songs = getSongsList();
     const song = songs.find(s => s.id === data.songId);
@@ -388,7 +457,7 @@ io.on('connection', (socket) => {
     broadcastState();
   });
 
-  // Select background video (loop, silent behind lyrics)
+  // Select background video
   socket.on('select-video', (data) => {
     presenterState.currentVideo = data.url || null;
     presenterState.videoPlaying = true;
@@ -410,7 +479,7 @@ io.on('connection', (socket) => {
     broadcastState();
   });
 
-  // === FOREGROUND VIDEO WITH AUDIO (SIN LETRA) ===
+  // Foreground video with audio
   socket.on('play-foreground-video', (data) => {
     presenterState.mediaMode = 'video';
     presenterState.foregroundVideo.url = data.url;
@@ -451,7 +520,6 @@ io.on('connection', (socket) => {
     broadcastState();
   });
 
-  // Time sync from projector display
   socket.on('sync-video-time', (data) => {
     presenterState.foregroundVideo.currentTime = data.currentTime;
     presenterState.foregroundVideo.duration = data.duration;
@@ -494,7 +562,14 @@ app.get('/display', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'display.html'));
 });
 
-server.listen(PORT, '0.0.0.0', () => {
+// Check if --tunnel parameter was provided in command line or env
+const shouldStartTunnel = process.argv.includes('--tunnel') ||
+                          process.argv.includes('-t') ||
+                          process.argv.includes('--cloudflare') ||
+                          process.env.TUNNEL === 'true' ||
+                          process.env.TUNNEL === '1';
+
+server.listen(PORT, '0.0.0.0', async () => {
   const ips = getLocalIpAddresses();
   console.log('\n================================================================');
   console.log('   🕊️  SANACIÓN SIN LÍMITES - SISTEMA DE PROYECCIÓN WORSHIP   ');
@@ -509,6 +584,17 @@ server.listen(PORT, '0.0.0.0', () => {
       console.log(`    👉 http://${ip.address}:${PORT} (${ip.interface})`);
     }
   }
+
+  if (shouldStartTunnel) {
+    try {
+      await startCloudflareTunnel();
+    } catch (err) {
+      console.error('Error al auto-iniciar el túnel:', err.message);
+    }
+  } else {
+    console.log(' 🌐 Túnel Cloudflare:               Desactivado (usa --tunnel para activarlo)');
+  }
+
   console.log('----------------------------------------------------------------');
   console.log(` 📂 Carpeta de Canciones:  ${SONGS_DIR}`);
   console.log(` 🎬 Carpeta de Videos:     ${VIDEOS_DIR}`);

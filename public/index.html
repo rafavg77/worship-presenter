@@ -50,6 +50,11 @@
         <span>VIDEO CON AUDIO</span>
       </div>
 
+      <div id="tunnel-status-pill" class="status-pill status-tunnel hidden" title="Túnel Cloudflare activo por Internet">
+        <span>🌐</span>
+        <span>TÚNEL ACTIVO</span>
+      </div>
+
       <div id="display-status-pill" class="status-pill status-disconnected" title="Estado de la pantalla HDMI">
         <span class="status-dot"></span>
         <span id="display-status-text">Proyector: 0</span>
@@ -69,15 +74,38 @@
   <div id="network-modal" class="modal-overlay hidden">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>📱 Conectar desde Celular / Tablet</h3>
+        <h3>📱 Conectar desde Celular / Red</h3>
         <button class="modal-close" id="btn-close-modal">&times;</button>
       </div>
       <div class="modal-body">
-        <p>Asegúrate de que tu celular esté conectado a la <strong>misma red WiFi</strong> que esta laptop Ubuntu.</p>
+        <p>1. <strong>En la misma red WiFi:</strong> Cualquier persona conectada al WiFi puede abrir:</p>
         <div class="ip-list" id="ip-list-container">
           <!-- IPs populated dynamically -->
         </div>
-        <p class="modal-tip">💡 <em>Cualquier persona en la misma red WiFi puede abrir esta dirección en su navegador móvil para avanzar o cambiar las canciones.</em></p>
+
+        <div class="tunnel-section">
+          <div class="tunnel-header" style="margin-top: 14px; margin-bottom: 8px;">
+            <p>2. <strong>Por Internet / Datos Celulares (Cloudflare Tunnel):</strong></p>
+            <small style="color:#94a3b8; font-size:0.75rem;">Permite que cualquier persona controle las canciones desde cualquier lugar sin estar en tu WiFi.</small>
+          </div>
+          
+          <div id="tunnel-active-box" class="ip-row tunnel-active-row hidden" style="margin-top: 8px;">
+            <div>
+              <div style="font-size:0.72rem; color:#a855f7; font-weight:700;">URL Pública Global (HTTPS):</div>
+              <a class="ip-link tunnel-link" id="tunnel-link" href="#" target="_blank">-</a>
+            </div>
+            <button class="btn-copy-ip" id="btn-copy-tunnel">Copiar</button>
+          </div>
+
+          <div id="tunnel-inactive-box" style="margin-top: 8px;">
+            <button id="btn-start-tunnel" class="action-btn btn-primary" style="width: 100%; justify-content: center;">
+              ⚡ Activar Túnel Cloudflare Ahora
+            </button>
+            <span id="tunnel-loading-text" class="tunnel-loading hidden" style="font-size:0.75rem; color:#38bdf8; display:block; text-align:center; margin-top:6px;">
+              ⏳ Conectando túnel Cloudflare seguro... espera unos segundos
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   </div>

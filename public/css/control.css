@@ -180,8 +180,29 @@ body {
   animation: pulse 2s infinite;
 }
 
+.status-pill.status-tunnel {
+  background-color: #31135e;
+  border-color: #9333ea;
+  color: #f3e8ff;
+}
+
 .status-pill.hidden {
   display: none !important;
+}
+
+.tunnel-section {
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+  margin-top: 10px;
+}
+
+.tunnel-active-row {
+  border-color: #9333ea !important;
+  background: rgba(147, 51, 234, 0.15) !important;
+}
+
+.tunnel-link {
+  color: #c084fc !important;
 }
 
 .status-dot {

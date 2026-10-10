@@ -23,6 +23,9 @@ importers:
       socket.io:
         specifier: ^4.8.1
         version: 4.8.4
+      untun:
+        specifier: ^0.2.2
+        version: 0.2.2
 
 packages:
 
@@ -391,6 +394,10 @@ packages:
   unpipe@1.0.0:
     resolution: {integrity: sha512-pjy2bYhSsufwWlKwPc+l3cN7+wuJlK6uz0YdJEOlQDbl6jo/YlPi4mb8agUkVC8BF7V8NuzeyPNqRksA3hztKQ==}
     engines: {node: '>= 0.8'}
+
+  untun@0.2.2:
+    resolution: {integrity: sha512-+NnOJcSiEtYsVgJmXUzQbJeRAFXJC4yPJYuh6kF9B0Rm6zunXcs/3GZOTllyocSbUDIxD6Bj7e/4ATw7sph1Sw==}
+    hasBin: true
 
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
@@ -852,6 +859,8 @@ snapshots:
   undici-types@8.9.0: {}
 
   unpipe@1.0.0: {}
+
+  untun@0.2.2: {}
 
   util-deprecate@1.0.2: {}
 

@@ -25,6 +25,16 @@ const ipListContainer = document.getElementById('ip-list-container');
 const displayStatusPill = document.getElementById('display-status-pill');
 const displayStatusText = document.getElementById('display-status-text');
 const videoModePill = document.getElementById('video-mode-pill');
+const tunnelStatusPill = document.getElementById('tunnel-status-pill');
+
+// Cloudflare Tunnel elements
+const tunnelActiveBox = document.getElementById('tunnel-active-box');
+const tunnelInactiveBox = document.getElementById('tunnel-inactive-box');
+const tunnelLink = document.getElementById('tunnel-link');
+const btnCopyTunnel = document.getElementById('btn-copy-tunnel');
+const btnStartTunnel = document.getElementById('btn-start-tunnel');
+const tunnelLoadingText = document.getElementById('tunnel-loading-text');
+let currentTunnelUrl = null;
 
 // Foreground Video Deck
 const videoPlaybackDeck = document.getElementById('video-playback-deck');
@@ -581,16 +591,69 @@ themeOptions.forEach(btn => {
   });
 });
 
+// Cloudflare Tunnel Logic
+function updateTunnelUI(url) {
+  currentTunnelUrl = url;
+  if (url) {
+    if (tunnelStatusPill) tunnelStatusPill.classList.remove('hidden');
+    if (tunnelActiveBox) tunnelActiveBox.classList.remove('hidden');
+    if (tunnelInactiveBox) tunnelInactiveBox.classList.add('hidden');
+    if (tunnelLink) {
+      tunnelLink.href = url;
+      tunnelLink.innerText = url;
+    }
+  } else {
+    if (tunnelStatusPill) tunnelStatusPill.classList.add('hidden');
+    if (tunnelActiveBox) tunnelActiveBox.classList.add('hidden');
+    if (tunnelInactiveBox) tunnelInactiveBox.classList.remove('hidden');
+  }
+}
+
+if (btnCopyTunnel) {
+  btnCopyTunnel.addEventListener('click', () => {
+    if (currentTunnelUrl) {
+      navigator.clipboard.writeText(currentTunnelUrl);
+      alert('¡Enlace público de Cloudflare copiado al portapapeles!');
+    }
+  });
+}
+
+if (btnStartTunnel) {
+  btnStartTunnel.addEventListener('click', async () => {
+    btnStartTunnel.disabled = true;
+    if (tunnelLoadingText) tunnelLoadingText.classList.remove('hidden');
+    try {
+      const res = await fetch('/api/tunnel/start', { method: 'POST' });
+      const data = await res.json();
+      if (data.tunnelUrl) {
+        updateTunnelUI(data.tunnelUrl);
+      }
+    } catch (err) {
+      alert('Error al iniciar el túnel de Cloudflare: ' + err.message);
+    } finally {
+      btnStartTunnel.disabled = false;
+      if (tunnelLoadingText) tunnelLoadingText.classList.add('hidden');
+    }
+  });
+}
+
 // Socket Events
 socket.on('init', (data) => {
   appState = data.state;
   songsList = data.songs || [];
   videosList = data.videos || [];
   networkIps = data.ips || [];
+  if (data.tunnelUrl) {
+    updateTunnelUI(data.tunnelUrl);
+  }
 
   renderSongsList(songsList);
   renderVideosList(videosList);
   updateUI(appState);
+});
+
+socket.on('tunnel-status', (data) => {
+  updateTunnelUI(data.tunnelUrl);
 });
 
 socket.on('state-changed', (state) => {

@@ -32,11 +32,19 @@ pnpm install
 ```
 
 ### 3. Iniciar el servidor
+
+**Modo Local / Red WiFi:**
 ```bash
 pnpm start
 ```
 
-Al iniciar, la terminal te mostrará un banner con las direcciones disponibles:
+**Modo con Túnel Cloudflare Público (para compartir la URL con cualquier persona por Internet / 4G / 5G):**
+```bash
+pnpm run start:tunnel
+```
+*(O también: `node server.js --tunnel`)*
+
+Al iniciar con el túnel, la terminal y la interfaz te darán un enlace seguro HTTPS global:
 ```text
 ================================================================
    🕊️  SANACIÓN SIN LÍMITES - SISTEMA DE PROYECCIÓN WORSHIP   
@@ -44,8 +52,11 @@ Al iniciar, la terminal te mostrará un banner con las direcciones disponibles:
  💻 Panel de Control (Laptop):      http://localhost:3000
  📽️ Pantalla Proyector (HDMI):      http://localhost:3000/display
  📱 Control Remoto (Celular/WiFi):  http://192.168.X.X:3000
+ 🌐 TÚNEL CLOUDFLARE PÚBLICO:       https://xxxx.trycloudflare.com
+    (¡Comparte este enlace con cualquier persona en cualquier lugar!)
 ================================================================
 ```
+*(Nota: También puedes activar el túnel en cualquier momento desde el botón `📱 Red / Celular` del panel web sin reiniciar el servidor).*
 
 ---
 
