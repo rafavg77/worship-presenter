@@ -38,6 +38,10 @@ body {
   user-select: none;
 }
 
+.hidden {
+  display: none !important;
+}
+
 /* Header / Navigation */
 .top-nav {
   height: 64px;
@@ -236,7 +240,7 @@ body {
 
 /* Sidebar */
 .sidebar {
-  width: 340px;
+  width: 360px;
   background-color: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
   display: flex;
@@ -245,28 +249,39 @@ body {
 }
 
 .sidebar-tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
   border-bottom: 1px solid var(--border-color);
   background-color: #0b101c;
+  padding: 6px;
 }
 
 .tab-btn {
-  flex: 1;
-  padding: 10px 4px;
+  padding: 7px 4px;
   background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: var(--text-main);
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .tab-btn.active {
   color: var(--accent);
-  border-bottom-color: var(--accent);
-  background-color: rgba(56, 189, 248, 0.05);
+  background-color: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.35);
 }
 
 .tab-panel {
@@ -1103,3 +1118,603 @@ kbd {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   PROPRESENTER V2 ADDITIONS: PLAYLIST, MEDIA, BIBLE, COUNTDOWN, DECKS, TOASTS
+   ========================================================================== */
+
+/* Generic Section Header */
+.panel-section-header {
+  padding: 10px 12px;
+  background: #0d1527;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.control-select {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 7px 10px;
+  color: #ffffff;
+  font-size: 0.82rem;
+  outline: none;
+}
+
+.control-select:focus {
+  border-color: var(--accent);
+}
+
+.icon-btn-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--primary);
+  border: none;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.icon-btn-sm:hover {
+  background: var(--primary-hover);
+}
+
+.badge-count-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--accent);
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+
+.sub-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* Status Pills */
+.status-image-active {
+  background: rgba(2, 132, 199, 0.2) !important;
+  border-color: #0284c7 !important;
+  color: #38bdf8 !important;
+}
+
+.status-bible-active {
+  background: rgba(234, 179, 8, 0.2) !important;
+  border-color: #eab308 !important;
+  color: #fde047 !important;
+}
+
+.status-countdown-active {
+  background: rgba(34, 197, 94, 0.2) !important;
+  border-color: #22c55e !important;
+  color: #4ade80 !important;
+}
+
+/* Playlist Panel */
+.playlist-header-top {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.playlist-select-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.playlist-select-row select {
+  flex: 1;
+}
+
+.playlist-stats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.playlist-items-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.playlist-item-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 10px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.playlist-item-card:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: var(--bg-card-hover);
+}
+
+.playlist-item-card.active {
+  border-color: var(--accent);
+  background: rgba(56, 189, 248, 0.12);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+}
+
+.playlist-item-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.playlist-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.playlist-item-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playlist-item-sub {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playlist-item-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.btn-item-ctrl {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-item-ctrl:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.btn-item-danger:hover {
+  background: var(--danger) !important;
+  border-color: var(--danger) !important;
+  color: #ffffff !important;
+}
+
+.panel-footer-actions {
+  padding: 10px;
+  border-top: 1px solid var(--border-color);
+  background: #0b101c;
+}
+
+/* Media Panel */
+.media-filter-bar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+  background: #0c1220;
+}
+
+.filter-chip {
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.filter-chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+.media-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.media-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+  transition: all 0.2s;
+}
+
+.media-card:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: var(--bg-card-hover);
+}
+
+.media-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #000000;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
+.media-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.media-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #ffffff;
+}
+
+.media-type-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 3px;
+}
+
+.tag-image {
+  background: rgba(2, 132, 199, 0.25);
+  color: #38bdf8;
+}
+
+.tag-video {
+  background: rgba(168, 85, 247, 0.25);
+  color: #c084fc;
+}
+
+.media-card-btns {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Bible Panel */
+.bible-selector-card {
+  padding: 10px;
+  background: #0c1220;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.bible-ch-v-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.scripture-preview-card {
+  margin: 10px;
+  background: #0f172a;
+  border: 1px solid rgba(253, 224, 71, 0.3);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.scripture-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.scripture-ref-title {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #fde047;
+}
+
+.badge-scripture {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.scripture-body {
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: #f8fafc;
+  font-weight: 500;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.bible-actions-group {
+  padding: 0 10px 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.bible-download-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bible-download-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+/* Countdown Panel */
+.countdown-settings-card {
+  padding: 10px;
+  background: #0c1220;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.countdown-time-inputs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.time-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.time-col input {
+  width: 60px;
+  text-align: center;
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-family: monospace;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: #fff;
+  padding: 4px;
+}
+
+.time-col span {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.time-colon {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.preset-pills-row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.preset-pill {
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.preset-pill.active {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.countdown-live-card {
+  margin: 10px;
+  background: #060b14;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+}
+
+.countdown-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.badge-status-stopped {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+
+.badge-status-running {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.15);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  animation: pulse 1.5s infinite;
+}
+
+.countdown-big-digits {
+  font-size: 2.8rem;
+  font-weight: 900;
+  font-family: 'Montserrat', monospace;
+  color: #ffffff;
+  letter-spacing: 0.05em;
+  margin: 4px 0 10px;
+}
+
+.countdown-btn-row {
+  display: flex;
+  gap: 8px;
+}
+
+.countdown-projection-actions {
+  padding: 0 10px 10px;
+}
+
+/* Center Workspace Media Decks */
+.image-playback-deck,
+.bible-playback-deck,
+.countdown-playback-deck {
+  padding: 16px 20px;
+  background: #0c1220;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: fadeIn 0.25s ease;
+}
+
+.deck-preview-box {
+  display: flex;
+  justify-content: center;
+  background: #000000;
+  border-radius: 8px;
+  padding: 10px;
+  max-height: 220px;
+  overflow: hidden;
+}
+
+#img-deck-preview {
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.bible-deck-content {
+  background: #0a0e17;
+  border: 1px solid rgba(253, 224, 71, 0.25);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.bible-deck-text {
+  font-size: 1.15rem;
+  line-height: 1.55;
+  color: #fef08a;
+  font-weight: 600;
+}
+
+.countdown-deck-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #000000;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 12px;
+  padding: 16px 24px;
+}
+
+.countdown-deck-digits {
+  font-size: 3.4rem;
+  font-weight: 900;
+  font-family: 'Montserrat', monospace;
+  color: #ffffff;
+}
+
+.countdown-deck-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+/* Toasts */
+.toast-container {
+  position: fixed;
+  bottom: 80px;
+  right: 24px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid var(--accent);
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.3s ease;
+  pointer-events: auto;
+}
+

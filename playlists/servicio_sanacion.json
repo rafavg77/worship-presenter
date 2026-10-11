@@ -1,0 +1,64 @@
+{
+  "id": "servicio_sanacion",
+  "name": "Servicio Sanación Sin Límites",
+  "createdAt": "2026-10-10",
+  "items": [
+    {
+      "id": "item-media-1",
+      "type": "media",
+      "title": "Bienvenida Sanación",
+      "mediaType": "image",
+      "url": "/media-store/bienvenida_sanacion.jpg",
+      "filename": "bienvenida_sanacion.jpg"
+    },
+    {
+      "id": "item-countdown-1",
+      "type": "countdown",
+      "title": "Cuenta Regresiva",
+      "duration": 300,
+      "header": "EL SERVICIO COMIENZA EN"
+    },
+    {
+      "id": "item-song-1",
+      "type": "song",
+      "songId": "01-jesucristo-basta",
+      "title": "Jesucristo Basta",
+      "artist": "Un Corazón",
+      "key": "Ab"
+    },
+    {
+      "id": "item-song-2",
+      "type": "song",
+      "songId": "02-quiero-conocer-a-jesus",
+      "title": "Quiero Conocer A Jesús (Yeshua)",
+      "artist": "Generación 12",
+      "key": "G"
+    },
+    {
+      "id": "item-song-3",
+      "type": "song",
+      "songId": "03-glorioso-dia",
+      "title": "Glorioso Día",
+      "artist": "Passion feat. Kristian Stanfill",
+      "key": "D"
+    },
+    {
+      "id": "item-song-4",
+      "type": "song",
+      "songId": "04-gracias-dios",
+      "title": "Gracias, Dios",
+      "artist": "Essential Worship",
+      "key": "C"
+    },
+    {
+      "id": "item-bible-1",
+      "type": "bible",
+      "title": "Juan 3:16",
+      "book": "S.Juan",
+      "chapter": 3,
+      "verse": 16,
+      "text": "Porque de tal manera amó Dios al mundo, que ha dado a su Hijo unigénito, para que todo aquel que en él cree, no se pierda, mas tenga vida eterna.",
+      "version": "RVR1960"
+    }
+  ]
+}

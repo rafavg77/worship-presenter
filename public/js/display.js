@@ -3,12 +3,28 @@ const socket = io({
   query: { type: 'display' }
 });
 
+// DOM Elements
 const slideContainer = document.getElementById('slide-container');
 const slideText = document.getElementById('slide-text');
 const blackoutLayer = document.getElementById('blackout-layer');
 const bgVideo = document.getElementById('bg-video');
 const bgAmbient = document.getElementById('bg-ambient');
 const contentLayer = document.getElementById('content-layer');
+
+// Layers for ProPresenter Media Modes
+const programImageContainer = document.getElementById('program-image-container');
+const programImage = document.getElementById('program-image');
+
+const bibleContainer = document.getElementById('bible-container');
+const bibleText = document.getElementById('bible-text');
+const bibleReference = document.getElementById('bible-reference');
+const bibleVersionTag = document.getElementById('bible-version-tag');
+
+const countdownContainer = document.getElementById('countdown-container');
+const countdownTitle = document.getElementById('countdown-title');
+const countdownDigits = document.getElementById('countdown-digits');
+const countdownEndMsg = document.getElementById('countdown-end-msg');
+
 const fgVideoContainer = document.getElementById('fg-video-container');
 const fgVideo = document.getElementById('fg-video');
 const audioUnlockBanner = document.getElementById('audio-unlock-banner');
@@ -19,10 +35,23 @@ const hudStatus = document.getElementById('hud-status');
 let currentSlideContent = '';
 let currentBgVideoSrc = '';
 let currentFgVideoSrc = '';
+let currentImageSrc = '';
 let hudTimeout = null;
 let lastTimeUpdate = 0;
 
-// Unlock audio on any interaction
+// Format seconds to HH:MM:SS or MM:SS
+function formatTimerDigits(sec) {
+  if (isNaN(sec) || sec < 0) sec = 0;
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  if (h > 0) {
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+// Unlock audio on user interaction
 function unlockAudio() {
   audioUnlockBanner.classList.add('hidden');
   if (fgVideo && !fgVideo.paused) {
@@ -72,7 +101,26 @@ fgVideo.addEventListener('ended', () => {
   socket.emit('foreground-video-ended');
 });
 
-// Apply state from server
+// Real-time Countdown updates from server
+socket.on('countdown-tick', (data) => {
+  if (data && typeof data.remainingSeconds === 'number') {
+    countdownDigits.innerText = formatTimerDigits(data.remainingSeconds);
+    if (data.remainingSeconds <= 0) {
+      countdownDigits.classList.add('hidden');
+      countdownEndMsg.classList.remove('hidden');
+    } else {
+      countdownDigits.classList.remove('hidden');
+      countdownEndMsg.classList.add('hidden');
+    }
+  }
+});
+
+socket.on('countdown-ended', () => {
+  countdownDigits.classList.add('hidden');
+  countdownEndMsg.classList.remove('hidden');
+});
+
+// Apply global state from server
 function applyState(state) {
   if (!state) return;
 
@@ -83,21 +131,58 @@ function applyState(state) {
     blackoutLayer.classList.remove('active');
   }
 
-  // 2. Clear Text
+  // 2. Clear Text flag
   if (state.isTextCleared) {
     slideContainer.classList.add('hidden');
+    bibleContainer.classList.add('hidden');
   } else {
     slideContainer.classList.remove('hidden');
+    if (state.mediaMode === 'bible') {
+      bibleContainer.classList.remove('hidden');
+    }
   }
 
   // 3. Theme & Font Size
   document.body.className = `theme-${state.theme || 'cinematic'} font-size-${state.fontSize || 'medium'}`;
 
-  // 4. FOREGROUND VIDEO WITH AUDIO (SIN LETRA)
-  if (state.mediaMode === 'video' && state.foregroundVideo && state.foregroundVideo.url) {
+  // 4. Background Video (Loop behind lyrics, bible, and countdown)
+  const shouldPlayBgVideo = ['lyrics', 'bible', 'countdown'].includes(state.mediaMode);
+  if (state.currentVideo && shouldPlayBgVideo) {
+    if (currentBgVideoSrc !== state.currentVideo) {
+      currentBgVideoSrc = state.currentVideo;
+      bgVideo.src = state.currentVideo;
+      bgVideo.load();
+      bgVideo.play().catch(e => console.log('Video loop autoplay prevented:', e));
+      bgVideo.classList.add('active');
+      bgAmbient.classList.add('hidden');
+    }
+    bgVideo.muted = true;
+    if (state.videoPlaying) {
+      if (bgVideo.paused) bgVideo.play().catch(() => {});
+    } else {
+      if (!bgVideo.paused) bgVideo.pause();
+    }
+  } else if (!state.currentVideo || !shouldPlayBgVideo) {
+    if (currentBgVideoSrc !== '') {
+      currentBgVideoSrc = '';
+      bgVideo.pause();
+      bgVideo.removeAttribute('src');
+      bgVideo.classList.remove('active');
+      bgAmbient.classList.remove('hidden');
+    }
+  }
+
+  // 5. Media Mode Switcher
+  const mode = state.mediaMode || 'lyrics';
+
+  // --- MODE: VIDEO CON AUDIO (Stand-alone video) ---
+  if (mode === 'video' && state.foregroundVideo && state.foregroundVideo.url) {
     hudStatus.innerText = 'VIDEO EN VIVO';
     fgVideoContainer.classList.remove('hidden');
     contentLayer.classList.add('hidden');
+    programImageContainer.classList.add('hidden');
+    bibleContainer.classList.add('hidden');
+    countdownContainer.classList.add('hidden');
 
     if (currentFgVideoSrc !== state.foregroundVideo.url) {
       currentFgVideoSrc = state.foregroundVideo.url;
@@ -114,52 +199,77 @@ function applyState(state) {
       if (playPromise !== undefined) {
         playPromise.catch(err => {
           console.warn('Autoplay with sound blocked:', err);
-          // Show unlock banner
           audioUnlockBanner.classList.remove('hidden');
         });
       }
     } else {
       if (!fgVideo.paused) fgVideo.pause();
     }
-    return; // Skip lyrics update while in video mode
+    return;
   } else {
-    // Return to Lyrics mode
-    hudStatus.innerText = 'PROYECCIÓN ACTIVA';
     fgVideoContainer.classList.add('hidden');
-    contentLayer.classList.remove('hidden');
     audioUnlockBanner.classList.add('hidden');
-    if (!fgVideo.paused) {
-      fgVideo.pause();
-    }
+    if (!fgVideo.paused) fgVideo.pause();
   }
 
-  // 5. Background Video (Loop behind lyrics)
-  if (state.currentVideo) {
-    if (currentBgVideoSrc !== state.currentVideo) {
-      currentBgVideoSrc = state.currentVideo;
-      bgVideo.src = state.currentVideo;
-      bgVideo.load();
-      bgVideo.play().catch(e => console.log('Video loop autoplay prevented:', e));
-      bgVideo.classList.add('active');
-      bgAmbient.classList.add('hidden');
+  // --- MODE: IMAGEN DE PROGRAMA (Flyers, Anuncios, Diapositivas) ---
+  if (mode === 'image' && state.currentProgramMedia && state.currentProgramMedia.url) {
+    hudStatus.innerText = 'IMAGEN EN VIVO';
+    programImageContainer.classList.remove('hidden');
+    contentLayer.classList.add('hidden');
+    bibleContainer.classList.add('hidden');
+    countdownContainer.classList.add('hidden');
+
+    if (currentImageSrc !== state.currentProgramMedia.url) {
+      currentImageSrc = state.currentProgramMedia.url;
+      programImage.src = state.currentProgramMedia.url;
     }
-    bgVideo.muted = true; // Background is always silent
-    if (state.videoPlaying) {
-      if (bgVideo.paused) bgVideo.play().catch(() => {});
-    } else {
-      if (!bgVideo.paused) bgVideo.pause();
-    }
+    return;
   } else {
-    if (currentBgVideoSrc !== '') {
-      currentBgVideoSrc = '';
-      bgVideo.pause();
-      bgVideo.removeAttribute('src');
-      bgVideo.classList.remove('active');
-      bgAmbient.classList.remove('hidden');
-    }
+    programImageContainer.classList.add('hidden');
   }
 
-  // 6. Lyrics Content
+  // --- MODE: BIBLIA ---
+  if (mode === 'bible' && state.currentBible) {
+    hudStatus.innerText = 'ESCRITURA EN VIVO';
+    bibleContainer.classList.remove('hidden');
+    contentLayer.classList.add('hidden');
+    countdownContainer.classList.add('hidden');
+
+    bibleText.innerText = state.currentBible.text || '';
+    bibleReference.innerText = state.currentBible.displayRef || state.currentBible.reference || '';
+    bibleVersionTag.innerText = state.currentBible.version || 'RVR1960';
+    return;
+  } else {
+    bibleContainer.classList.add('hidden');
+  }
+
+  // --- MODE: CUENTA REGRESIVA ---
+  if (mode === 'countdown' && state.countdown) {
+    hudStatus.innerText = 'CUENTA REGRESIVA';
+    countdownContainer.classList.remove('hidden');
+    contentLayer.classList.add('hidden');
+
+    countdownTitle.innerText = state.countdown.title || 'EL SERVICIO COMIENZA EN';
+    countdownEndMsg.innerText = state.countdown.endMessage || '¡BIENVENIDOS!';
+    countdownDigits.innerText = formatTimerDigits(state.countdown.remainingSeconds);
+
+    if (state.countdown.remainingSeconds <= 0) {
+      countdownDigits.classList.add('hidden');
+      countdownEndMsg.classList.remove('hidden');
+    } else {
+      countdownDigits.classList.remove('hidden');
+      countdownEndMsg.classList.add('hidden');
+    }
+    return;
+  } else {
+    countdownContainer.classList.add('hidden');
+  }
+
+  // --- MODE: LETRAS DE CANCIONES (Worship Lyrics) ---
+  hudStatus.innerText = 'PROYECCIÓN ACTIVA';
+  contentLayer.classList.remove('hidden');
+
   let newText = '';
   if (state.currentSong && state.currentSlideIndex >= 0 && state.currentSong.slides) {
     const slide = state.currentSong.slides[state.currentSlideIndex];

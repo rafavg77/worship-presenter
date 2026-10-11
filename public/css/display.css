@@ -14,6 +14,10 @@ html, body {
   color: #ffffff;
 }
 
+.hidden {
+  display: none !important;
+}
+
 /* Background Layer (Loop behind lyrics) */
 .background-layer {
   position: fixed;
@@ -258,4 +262,170 @@ body:hover .hud-bar,
 
 .hud-btn:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+/* Program Image Layer */
+.program-image-container {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #000000;
+  transition: opacity 0.4s ease;
+}
+
+.program-image-container.hidden {
+  display: none !important;
+}
+
+.program-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+/* Bible Scripture Layer */
+.bible-container {
+  position: fixed;
+  inset: 0;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4vw 7vw;
+  pointer-events: none;
+}
+
+.bible-container.hidden {
+  display: none !important;
+}
+
+.bible-card {
+  width: 100%;
+  max-width: 1500px;
+  text-align: center;
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bible-text {
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  text-shadow: 
+    0 2px 10px rgba(0, 0, 0, 0.9),
+    0 4px 30px rgba(0, 0, 0, 0.9),
+    0 8px 60px rgba(0, 0, 0, 0.8);
+}
+
+body.font-size-small .bible-text {
+  font-size: clamp(1.8rem, 3.8vw, 4.2rem);
+}
+
+body.font-size-medium .bible-text {
+  font-size: clamp(2.3rem, 4.8vw, 5.4rem);
+}
+
+body.font-size-large .bible-text {
+  font-size: clamp(2.8rem, 5.8vw, 6.6rem);
+}
+
+body.font-size-xlarge .bible-text {
+  font-size: clamp(3.2rem, 6.8vw, 7.8rem);
+}
+
+.bible-ref-container {
+  margin-top: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  padding: 8px 24px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.bible-reference {
+  font-weight: 800;
+  font-size: clamp(1.3rem, 2.4vw, 2.6rem);
+  color: #fde047; /* Yellow/Gold accent for Scripture Ref */
+  letter-spacing: 0.02em;
+}
+
+.bible-version-tag {
+  font-weight: 700;
+  font-size: clamp(0.9rem, 1.6vw, 1.6rem);
+  color: #93c5fd;
+  text-transform: uppercase;
+}
+
+/* Countdown Timer Layer */
+.countdown-container {
+  position: fixed;
+  inset: 0;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4vw;
+  pointer-events: none;
+}
+
+.countdown-container.hidden {
+  display: none !important;
+}
+
+.countdown-card {
+  text-align: center;
+  background: rgba(10, 15, 30, 0.65);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 32px;
+  padding: 3.5rem 5.5rem;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.85);
+  animation: fadeIn 0.4s ease;
+}
+
+.countdown-title {
+  font-size: clamp(1.4rem, 2.8vw, 3rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #94a3b8;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9);
+}
+
+.countdown-digits {
+  font-family: 'Montserrat', monospace, sans-serif;
+  font-weight: 900;
+  font-size: clamp(4.5rem, 12vw, 13rem);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  text-shadow: 
+    0 4px 30px rgba(0, 0, 0, 0.95),
+    0 0 60px rgba(56, 189, 248, 0.4);
+}
+
+.countdown-end-msg {
+  font-size: clamp(2.5rem, 6vw, 6.5rem);
+  font-weight: 900;
+  color: #4ade80;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 40px rgba(74, 222, 128, 0.6);
+  animation: pulse 1.6s infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }

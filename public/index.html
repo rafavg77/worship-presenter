@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/css/control.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@700;800;900&family=Fira+Code:wght@500;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <!-- Top Navigation / ProPresenter Control Header -->
@@ -16,20 +16,20 @@
       <span class="brand-icon">🕊️</span>
       <div class="brand-info">
         <h1>Sanación Sin Límites</h1>
-        <span class="sub-title">Worship Presenter • ProPresenter Web</span>
+        <span class="sub-title">Worship Presenter • ProPresenter Pro</span>
       </div>
     </div>
 
-    <!-- Quick ProPresenter Live Buttons -->
+    <!-- Quick ProPresenter Live Actions -->
     <div class="live-actions">
       <button id="btn-blackout" class="action-btn btn-blackout" title="Pantalla Negra total (Tecla B)">
         <span class="btn-icon">⬛</span>
         <span>BLACKOUT</span>
       </button>
 
-      <button id="btn-clear-text" class="action-btn btn-clear-text" title="Ocultar solo la letra (Tecla C)">
+      <button id="btn-clear-text" class="action-btn btn-clear-text" title="Ocultar solo la letra o texto (Tecla C)">
         <span class="btn-icon">🚫</span>
-        <span>LIMPIAR LETRA</span>
+        <span>LIMPIAR TEXTO</span>
       </button>
 
       <div class="nav-divider"></div>
@@ -43,11 +43,26 @@
       </button>
     </div>
 
-    <!-- Status & Launch Display -->
+    <!-- Status & Projection Actions -->
     <div class="nav-right">
       <div id="video-mode-pill" class="status-pill status-video-active hidden" title="Hay un video proyectándose con audio">
         <span>🎬</span>
-        <span>VIDEO CON AUDIO</span>
+        <span>VIDEO EN VIVO</span>
+      </div>
+
+      <div id="image-mode-pill" class="status-pill status-image-active hidden" title="Hay una imagen proyectándose">
+        <span>🖼️</span>
+        <span>IMAGEN EN VIVO</span>
+      </div>
+
+      <div id="bible-mode-pill" class="status-pill status-bible-active hidden" title="Hay un versículo bíblico proyectándose">
+        <span>📖</span>
+        <span>BIBLIA EN VIVO</span>
+      </div>
+
+      <div id="countdown-mode-pill" class="status-pill status-countdown-active hidden" title="Cuenta regresiva proyectándose">
+        <span>⏱️</span>
+        <span>CONTADOR EN VIVO</span>
       </div>
 
       <div id="tunnel-status-pill" class="status-pill status-tunnel hidden" title="Túnel Cloudflare activo por Internet">
@@ -64,7 +79,7 @@
         <span>📽️</span> Pantalla HDMI
       </button>
 
-      <button id="btn-show-network" class="action-btn btn-ghost" title="Ver URLs y código QR para celular">
+      <button id="btn-show-network" class="action-btn btn-ghost" title="Ver URLs y código de red/celular">
         <span>📱</span> Red / Celular
       </button>
     </div>
@@ -86,7 +101,7 @@
         <div class="tunnel-section">
           <div class="tunnel-header" style="margin-top: 14px; margin-bottom: 8px;">
             <p>2. <strong>Por Internet / Datos Celulares (Cloudflare Tunnel):</strong></p>
-            <small style="color:#94a3b8; font-size:0.75rem;">Permite que cualquier persona controle las canciones desde cualquier lugar sin estar en tu WiFi.</small>
+            <small style="color:#94a3b8; font-size:0.75rem;">Permite que cualquier operador controle las diapositivas desde cualquier lugar del mundo sin estar en el WiFi.</small>
           </div>
           
           <div id="tunnel-active-box" class="ip-row tunnel-active-row hidden" style="margin-top: 8px;">
@@ -140,7 +155,7 @@
         </div>
         <div class="form-group">
           <label>Contenido y Diapositivas (usa [Verso 1], [Coro], etc.):</label>
-          <textarea id="input-song-content" rows="12" placeholder="[Verso 1]
+          <textarea id="input-song-content" rows="11" placeholder="[Verso 1]
 Nuestros corazones insaciables son...
 
 [Coro]
@@ -153,32 +168,264 @@ Jesucristo basta, Jesucristo basta..."></textarea>
     </div>
   </div>
 
-  <!-- Main Layout -->
-  <div class="main-layout">
-    <!-- Left Sidebar: Song Setlist & Videos -->
-    <aside class="sidebar">
-      <div class="sidebar-tabs">
-        <button class="tab-btn active" id="tab-songs-btn">🎵 Repertorio</button>
-        <button class="tab-btn" id="tab-videos-btn">🎬 Videos y Medios</button>
-        <button class="tab-btn" id="tab-settings-btn">⚙️ Ajustes</button>
+  <!-- New Playlist Modal -->
+  <div id="new-playlist-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📜 Crear Nueva Playlist de Servicio</h3>
+        <button class="modal-close" id="btn-close-playlist-modal">&times;</button>
       </div>
-
-      <!-- Tab 1: Canciones -->
-      <div class="tab-panel active" id="tab-songs-panel">
-        <div class="search-box">
-          <input type="text" id="song-search-input" placeholder="🔍 Buscar canción...">
-          <button id="btn-add-song" class="icon-btn" title="Agregar Canción">+</button>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Nombre del Servicio / Playlist:</label>
+          <input type="text" id="input-playlist-name" placeholder="Ej. Servicio Domingo Noche">
         </div>
-        <div class="songs-list" id="songs-list">
+        <div class="modal-actions" style="margin-top:14px;">
+          <button id="btn-save-new-playlist" class="action-btn btn-primary" style="width:100%; justify-content:center;">
+            Crear Playlist
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Download Bible Modal -->
+  <div id="download-bible-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📖 Descargar Versión de la Biblia</h3>
+        <button class="modal-close" id="btn-close-bible-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:12px;">
+          Selecciona una versión para descargarla e integrarla automáticamente al sistema para uso sin conexión:
+        </p>
+        <div class="bible-download-list" id="bible-download-list">
           <!-- Populated by JS -->
         </div>
       </div>
+    </div>
+  </div>
 
-      <!-- Tab 2: Videos & Medios -->
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Main Layout -->
+  <div class="main-layout">
+    <!-- Left Sidebar: ProPresenter Sections -->
+    <aside class="sidebar">
+      <div class="sidebar-tabs">
+        <button class="tab-btn active" id="tab-playlist-btn" title="Orden del Culto">📜 Playlist</button>
+        <button class="tab-btn" id="tab-songs-btn" title="Catálogo de Canciones">📚 Canciones</button>
+        <button class="tab-btn" id="tab-media-btn" title="Fotos y Videos del Programa">🖼️ Medios</button>
+        <button class="tab-btn" id="tab-bible-btn" title="Lectura y Proyección Bíblica">📖 Biblia</button>
+        <button class="tab-btn" id="tab-countdown-btn" title="Reloj Contador de Inicio">⏱️ Contador</button>
+        <button class="tab-btn" id="tab-videos-btn" title="Fondos de Alabanza">🎬 Fondos</button>
+        <button class="tab-btn" id="tab-settings-btn" title="Ajustes de Proyección">⚙️ Ajustes</button>
+      </div>
+
+      <!-- TAB 1: PLAYLIST / ORDEN DE SERVICIO -->
+      <div class="tab-panel active" id="tab-playlist-panel">
+        <div class="panel-section-header">
+          <div class="playlist-header-top">
+            <label style="font-size:0.75rem; color:#94a3b8; font-weight:700;">PLAYLIST ACTIVA:</label>
+            <div class="playlist-select-row">
+              <select id="playlist-select" class="control-select">
+                <!-- Populated dynamically -->
+              </select>
+              <button id="btn-new-playlist" class="icon-btn-sm" title="Crear nueva playlist">+</button>
+            </div>
+          </div>
+          <div class="playlist-stats-row">
+            <span id="playlist-items-count" class="badge-count-pill">0 Elementos</span>
+            <span class="sub-label">Haz clic para proyectar</span>
+          </div>
+        </div>
+
+        <div class="playlist-items-container" id="playlist-items-list">
+          <!-- Populated dynamically -->
+        </div>
+
+        <div class="panel-footer-actions">
+          <small style="color:#64748b; font-size:0.72rem;">💡 Agrega elementos a esta playlist desde Canciones, Medios, Biblia o Contador.</small>
+        </div>
+      </div>
+
+      <!-- TAB 2: CATÁLOGO DE CANCIONES -->
+      <div class="tab-panel" id="tab-songs-panel">
+        <div class="search-box">
+          <input type="text" id="song-search-input" placeholder="🔍 Buscar por título o letra...">
+          <button id="btn-add-song" class="icon-btn" title="Crear Canción">+</button>
+        </div>
+        <div class="songs-list" id="songs-list">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- TAB 3: MEDIOS DEL PROGRAMA (FOTOS Y VIDEOS) -->
+      <div class="tab-panel" id="tab-media-panel">
+        <div class="panel-section-header">
+          <div style="font-size:0.78rem; font-weight:700; color:#38bdf8;">FOTOS Y VIDEOS DEL SERVICIO</div>
+          <small style="color:#94a3b8; font-size:0.72rem;">Anuncios, flyers, testimonios y videos especiales con audio.</small>
+        </div>
+
+        <div class="media-filter-bar">
+          <button class="filter-chip active" data-filter="all">Todos</button>
+          <button class="filter-chip" data-filter="image">🖼️ Fotos</button>
+          <button class="filter-chip" data-filter="video">🎬 Videos</button>
+        </div>
+
+        <div class="media-list" id="media-list">
+          <!-- Populated dynamically -->
+        </div>
+
+        <div class="upload-box">
+          <label class="upload-label">
+            📁 Subir Foto o Video (.jpg/.png/.mp4)
+            <input type="file" id="input-media-upload" accept="image/*,video/mp4,video/webm,video/quicktime" style="display:none">
+          </label>
+        </div>
+      </div>
+
+      <!-- TAB 4: BIBLIA -->
+      <div class="tab-panel" id="tab-bible-panel">
+        <div class="panel-section-header">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label style="font-size:0.75rem; color:#94a3b8; font-weight:700;">VERSIÓN:</label>
+            <button id="btn-open-download-bible" class="link-btn" title="Descargar más versiones">+ Más versiones</button>
+          </div>
+          <select id="bible-version-select" class="control-select" style="margin-top:4px;">
+            <option value="rvr1960">Reina Valera 1960 (RVR1960)</option>
+            <option value="rva">Reina Valera Actualizada (RVA)</option>
+          </select>
+        </div>
+
+        <div class="bible-selector-card">
+          <div class="form-group">
+            <label>Libro:</label>
+            <select id="bible-book-select" class="control-select">
+              <!-- Populated dynamically with 66 canonical books -->
+            </select>
+          </div>
+
+          <div class="bible-ch-v-row">
+            <div class="form-group" style="flex:1;">
+              <label>Capítulo:</label>
+              <input type="number" id="bible-chapter-input" min="1" max="150" value="3">
+            </div>
+            <div class="form-group" style="flex:1.2;">
+              <label>Versículo(s):</label>
+              <input type="text" id="bible-verse-input" placeholder="16 o 16-18" value="16">
+            </div>
+            <button id="btn-fetch-bible" class="action-btn btn-sm btn-accent" style="align-self:flex-end; height:36px;">
+              🔍 Ver
+            </button>
+          </div>
+        </div>
+
+        <!-- Scripture Preview Card -->
+        <div class="scripture-preview-card">
+          <div class="scripture-header">
+            <span id="bible-preview-ref" class="scripture-ref-title">Juan 3:16 (RVR1960)</span>
+            <span class="badge-scripture">VISTA PREVIA</span>
+          </div>
+          <p id="bible-preview-text" class="scripture-body">
+            Porque de tal manera amó Dios al mundo, que ha dado a su Hijo unigénito, para que todo aquel que en él cree, no se pierda, mas tenga vida eterna.
+          </p>
+        </div>
+
+        <div class="bible-actions-group">
+          <button id="btn-project-bible" class="action-btn btn-primary" style="flex:1.4; justify-content:center;">
+            📽️ Proyectar Versículo
+          </button>
+          <button id="btn-add-bible-playlist" class="action-btn btn-ghost" style="flex:1; justify-content:center;" title="Añadir al orden del culto">
+            ➕ Al Playlist
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 5: CUENTA REGRESIVA -->
+      <div class="tab-panel" id="tab-countdown-panel">
+        <div class="panel-section-header">
+          <div style="font-size:0.78rem; font-weight:700; color:#38bdf8;">RELOJ DE CUENTA REGRESIVA</div>
+          <small style="color:#94a3b8; font-size:0.72rem;">Sincronizado al milisegundo en todas las pantallas y celulares.</small>
+        </div>
+
+        <div class="countdown-settings-card">
+          <label style="font-size:0.75rem; color:#94a3b8; font-weight:700;">DURACIÓN DEL CONTADOR:</label>
+          <div class="countdown-time-inputs">
+            <div class="time-col">
+              <input type="number" id="countdown-hours" min="0" max="23" value="0">
+              <span>Horas</span>
+            </div>
+            <span class="time-colon">:</span>
+            <div class="time-col">
+              <input type="number" id="countdown-minutes" min="0" max="59" value="5">
+              <span>Minutos</span>
+            </div>
+            <span class="time-colon">:</span>
+            <div class="time-col">
+              <input type="number" id="countdown-seconds" min="0" max="59" value="0">
+              <span>Segundos</span>
+            </div>
+          </div>
+
+          <!-- Presets -->
+          <div class="preset-pills-row">
+            <button class="preset-pill" data-minutes="1">1 min</button>
+            <button class="preset-pill" data-minutes="3">3 min</button>
+            <button class="preset-pill active" data-minutes="5">5 min</button>
+            <button class="preset-pill" data-minutes="10">10 min</button>
+            <button class="preset-pill" data-minutes="15">15 min</button>
+          </div>
+
+          <div class="form-group" style="margin-top:12px;">
+            <label>Título en Pantalla:</label>
+            <input type="text" id="countdown-title-input" value="EL SERVICIO COMIENZA EN">
+          </div>
+
+          <div class="form-group" style="margin-top:8px;">
+            <label>Mensaje al Finalizar:</label>
+            <input type="text" id="countdown-end-input" value="¡BIENVENIDOS!">
+          </div>
+        </div>
+
+        <!-- Live Countdown Deck in Sidebar -->
+        <div class="countdown-live-card">
+          <div class="countdown-header-row">
+            <span id="countdown-status-badge" class="badge-status-stopped">DETENIDO</span>
+            <span style="font-size:0.72rem; color:#94a3b8;">TIEMPO RESTANTE</span>
+          </div>
+          <div id="countdown-live-digits" class="countdown-big-digits">05:00</div>
+
+          <div class="countdown-btn-row">
+            <button id="btn-countdown-toggle" class="action-btn btn-success" style="flex:1.2; justify-content:center;">
+              <span id="countdown-toggle-icon">▶</span> <span id="countdown-toggle-text">Iniciar</span>
+            </button>
+            <button id="btn-countdown-reset" class="action-btn btn-ghost" style="flex:0.8; justify-content:center;">
+              🔄 Reiniciar
+            </button>
+          </div>
+        </div>
+
+        <div class="countdown-projection-actions">
+          <button id="btn-countdown-project-toggle" class="action-btn btn-primary" style="width:100%; justify-content:center;">
+            📽️ Proyectar Contador en Pantalla
+          </button>
+          <button id="btn-add-countdown-playlist" class="action-btn btn-ghost" style="width:100%; justify-content:center; margin-top:8px;">
+            ➕ Añadir Contador al Playlist
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 6: FONDOS EN BUCLE (LOOP DE ALABANZA) -->
       <div class="tab-panel" id="tab-videos-panel">
         <div class="video-panel-header">
-          <span>VIDEOS EN CARPETAS</span>
-          <button id="btn-clear-video" class="action-btn btn-sm btn-ghost" title="Quitar fondo en bucle">Quitar Fondo</button>
+          <div>
+            <span style="font-weight:700;">FONDOS EN BUCLE</span>
+            <div style="font-size:0.72rem; color:#94a3b8;">Videos silenciosos que corren detrás de las letras y versículos.</div>
+          </div>
+          <button id="btn-clear-video" class="action-btn btn-sm btn-ghost" title="Quitar video y volver a fondo estático">Quitar Fondo</button>
         </div>
         
         <div class="videos-list" id="videos-list">
@@ -187,13 +434,13 @@ Jesucristo basta, Jesucristo basta..."></textarea>
 
         <div class="upload-box">
           <label class="upload-label">
-            📁 Subir nuevo video (.mp4/.webm)
-            <input type="file" id="input-file-upload" accept="video/mp4,video/webm,video/quicktime,.txt" style="display:none">
+            📁 Subir nuevo fondo (.mp4/.webm)
+            <input type="file" id="input-file-upload" accept="video/mp4,video/webm,video/quicktime" style="display:none">
           </label>
         </div>
       </div>
 
-      <!-- Tab 3: Ajustes -->
+      <!-- TAB 7: AJUSTES -->
       <div class="tab-panel" id="tab-settings-panel">
         <div class="settings-group">
           <label class="settings-label">Tamaño de Texto en Proyector:</label>
@@ -220,16 +467,17 @@ Jesucristo basta, Jesucristo basta..."></textarea>
           <ul>
             <li><kbd>Espacio</kbd> / <kbd>→</kbd> : Siguiente diapositiva</li>
             <li><kbd>←</kbd> / <kbd>Backspace</kbd> : Diapositiva anterior</li>
-            <li><kbd>B</kbd> : Activar/Desactivar Blackout</li>
-            <li><kbd>C</kbd> : Ocultar/Mostrar texto</li>
+            <li><kbd>B</kbd> : Activar/Desactivar Blackout total</li>
+            <li><kbd>C</kbd> : Limpiar / Ocultar texto en pantalla</li>
+            <li><kbd>F</kbd> : Pantalla completa en ventana de proyector</li>
           </ul>
         </div>
       </div>
     </aside>
 
-    <!-- Center Workspace: ProPresenter Slides Grid & Video Playback Deck -->
+    <!-- Center Workspace: ProPresenter Slides Grid & Media Decks -->
     <main class="slides-workspace">
-      <!-- Active Song Banner -->
+      <!-- Active Song Banner (for lyrics mode) -->
       <section class="active-song-header" id="active-song-header">
         <div class="song-meta-left">
           <h2 id="current-song-title">Cargando canciones...</h2>
@@ -283,14 +531,70 @@ Jesucristo basta, Jesucristo basta..."></textarea>
         </div>
       </section>
 
-      <!-- Slides Grid Area -->
+      <!-- Image Projection Deck (Shown when projecting flyer or photo) -->
+      <section class="image-playback-deck hidden" id="image-playback-deck">
+        <div class="deck-header">
+          <div class="deck-title-box">
+            <span class="deck-badge" style="background:#0284c7; color:#fff;">🖼️ PROYECTANDO IMAGEN / FLYER</span>
+            <h3 id="img-deck-filename" class="deck-filename">imagen.jpg</h3>
+          </div>
+          <button id="btn-img-stop" class="action-btn btn-danger-dark">
+            ⏹ Quitar Imagen y Volver a Letras
+          </button>
+        </div>
+        <div class="deck-preview-box">
+          <img id="img-deck-preview" src="" alt="Vista previa de imagen">
+        </div>
+      </section>
+
+      <!-- Bible Projection Deck (Shown when projecting scripture) -->
+      <section class="bible-playback-deck hidden" id="bible-playback-deck">
+        <div class="deck-header">
+          <div class="deck-title-box">
+            <span class="deck-badge" style="background:#854d0e; color:#fef08a;">📖 PROYECTANDO VERSÍCULO BÍBLICO</span>
+            <h3 id="bible-deck-ref" class="deck-filename">Juan 3:16</h3>
+          </div>
+          <button id="btn-bible-stop" class="action-btn btn-danger-dark">
+            ⏹ Quitar Versículo y Volver a Letras
+          </button>
+        </div>
+        <div class="bible-deck-content">
+          <p id="bible-deck-text" class="bible-deck-text"></p>
+        </div>
+      </section>
+
+      <!-- Countdown Projection Deck (Shown when projecting countdown) -->
+      <section class="countdown-playback-deck hidden" id="countdown-playback-deck">
+        <div class="deck-header">
+          <div class="deck-title-box">
+            <span class="deck-badge" style="background:#15803d; color:#bbf7d0;">⏱️ PROYECTANDO CUENTA REGRESIVA</span>
+            <h3 id="countdown-deck-title" class="deck-filename">EL SERVICIO COMIENZA EN</h3>
+          </div>
+          <button id="btn-countdown-stop" class="action-btn btn-danger-dark">
+            ⏹ Quitar Contador y Volver a Letras
+          </button>
+        </div>
+        <div class="countdown-deck-content">
+          <div id="countdown-deck-digits" class="countdown-deck-digits">05:00</div>
+          <div class="countdown-deck-buttons">
+            <button id="btn-countdown-deck-toggle" class="action-btn btn-success">
+              ▶ Reanudar
+            </button>
+            <button id="btn-countdown-deck-reset" class="action-btn btn-ghost">
+              🔄 Reiniciar
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Slides Grid Area (Worship Lyrics) -->
       <section class="slides-grid-container" id="slides-grid-container">
         <!-- Rendered dynamically -->
       </section>
     </main>
   </div>
 
-  <!-- Bottom Confidence Monitor / Quick Bar -->
+  <!-- Bottom Confidence Monitor / Quick Navigation Bar -->
   <footer class="bottom-bar">
     <div class="confidence-box live-box">
       <span class="confidence-label">🔴 EN VIVO (PROYECTANDO):</span>

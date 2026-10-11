@@ -1,7 +1,7 @@
 {
   "name": "worship-presenter",
-  "version": "1.1.0",
-  "description": "Sistema de proyección de letras y videos estilo ProPresenter para eventos en vivo con túnel Cloudflare",
+  "version": "2.0.0",
+  "description": "Sistema de proyección ProPresenter v2 para Ubuntu: Playlists de servicio, Catálogo de canciones, Biblia offline, Reloj contador de inicio, Medios de programa y Túnel Cloudflare",
   "main": "server.js",
   "type": "module",
   "scripts": {
