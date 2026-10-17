@@ -14,13 +14,6 @@
           "filename": "bienvenida_sanacion.jpg",
           "url": "/media-store/bienvenida_sanacion.jpg",
           "mediaType": "image"
-        },
-        {
-          "id": "item_whatsapp_vid",
-          "title": "WhatsApp Video 2026-10-10 at 4.44.14 PM.mp4",
-          "filename": "WhatsApp Video 2026-10-10 at 4.44.14 PM.mp4",
-          "url": "/media-store/WhatsApp%20Video%202026-10-10%20at%204.44.14%20PM.mp4",
-          "mediaType": "video"
         }
       ]
     },
@@ -47,6 +40,25 @@
       "songId": "04-suelto",
       "title": "Suelto",
       "artist": "Sarai Rivera"
+    },
+    {
+      "id": "custom_anuncio_en_vivo",
+      "type": "custom",
+      "mediaType": "custom",
+      "title": "BIENVENIDOS",
+      "text": "Nos alegra tenerte en casa hoy.\nHaz clic en el lápiz (✎) para editar este texto, fuente o fondo en vivo.",
+      "fontFamily": "'Montserrat', sans-serif",
+      "fontSizeVw": 4.8,
+      "textColor": "#ffffff",
+      "titleColor": "#fde047",
+      "textAlign": "center",
+      "fontWeight": "800",
+      "fontStyle": "normal",
+      "uppercase": false,
+      "textShadow": "strong",
+      "bgType": "video",
+      "bgValue": "/videos/01_fondo_particulas_doradas.mp4",
+      "overlayOpacity": 0.35
     },
     {
       "id": "space_cierre",

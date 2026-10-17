@@ -796,9 +796,16 @@ function resetCountdown() {
   broadcastState();
 }
 
-// Helper to project a media item (image or video)
+// Helper to project a media item (image, video, or custom editable slide)
 function projectMediaItem(mediaItem) {
   if (!mediaItem) return;
+  if (mediaItem.type === 'custom' || mediaItem.mediaType === 'custom') {
+    presenterState.mediaMode = 'custom';
+    presenterState.currentCustomSlide = mediaItem;
+    presenterState.foregroundVideo.playing = false;
+    presenterState.isTextCleared = false;
+    return;
+  }
   const mType = mediaItem.mediaType || (/\.(mp4|webm|mov|mkv|m4v)$/i.test(mediaItem.filename || mediaItem.url || '') ? 'video' : 'image');
   if (mType === 'image') {
     presenterState.mediaMode = 'image';
@@ -1245,7 +1252,7 @@ io.on('connection', (socket) => {
     broadcastState();
   });
 
-  // Program Media Projection (Image or Video)
+  // Program Media Projection (Image, Video, or Custom Slide)
   socket.on('project-media', (data) => {
     if (data && data.spaceId && typeof data.slideIndex === 'number') {
       presenterState.workspaceMode = 'space';
@@ -1253,6 +1260,18 @@ io.on('connection', (socket) => {
       presenterState.currentSpaceSlideIndex = data.slideIndex;
     }
     projectMediaItem(data);
+    broadcastState();
+  });
+
+  // Custom Editable Slide Projection & Live Update
+  socket.on('project-custom-slide', (data) => {
+    if (!data) return;
+    presenterState.currentCustomSlide = data;
+    if (data.project !== false) {
+      presenterState.mediaMode = 'custom';
+      presenterState.foregroundVideo.playing = false;
+      presenterState.isTextCleared = false;
+    }
     broadcastState();
   });
 

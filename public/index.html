@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/css/control.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@700;800;900&family=Fira+Code:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Dancing+Script:wght@700&family=Fira+Code:wght@500;700&family=Inter:wght@400;500;600;700;800&family=Montserrat:ital,wght@0,600;0,700;0,800;0,900;1,600;1,800&family=Oswald:wght@600;700&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&display=swap" rel="stylesheet">
 </head>
 <body>
   <!-- Top Navigation / ProPresenter Control Header -->
@@ -62,6 +62,11 @@
       <div id="countdown-mode-pill" class="status-pill status-countdown-active hidden" title="Cuenta regresiva proyectándose">
         <span>⏱️</span>
         <span>CONTADOR EN VIVO</span>
+      </div>
+
+      <div id="custom-mode-pill" class="status-pill status-bible-active hidden" title="Objeto editable proyectándose en vivo">
+        <span>🎨</span>
+        <span>EDITABLE EN VIVO</span>
       </div>
 
       <div id="tunnel-status-pill" class="status-pill status-tunnel hidden" title="Túnel Cloudflare activo por Internet">
@@ -222,6 +227,187 @@ Glorioso día..."></textarea>
     </div>
   </div>
 
+  <!-- Custom Editable Object Studio Modal -->
+  <div id="custom-slide-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-custom-studio">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <h3>🎨 Estudio de Objeto Editable</h3>
+          <span id="cs-live-sync-badge" class="badge-count-pill hidden" style="background:rgba(239,68,68,0.2); color:#fca5a5; border:1px solid #ef4444;">🔴 EN VIVO (Sincronizando cambios en pantalla)</span>
+        </div>
+        <button class="modal-close" id="btn-close-custom-modal">&times;</button>
+      </div>
+      <div class="modal-body custom-studio-grid">
+        <!-- Left Column: Live 16:9 WYSIWYG Preview + Background Controls -->
+        <div class="custom-studio-left">
+          <label style="font-size:0.75rem; color:#38bdf8; font-weight:800; letter-spacing:0.5px;">VISTA PREVIA EN TIEMPO REAL (16:9):</label>
+          <div id="custom-preview-stage" class="custom-preview-stage">
+            <video id="custom-preview-video" class="custom-preview-video hidden" autoplay loop muted playsinline></video>
+            <div id="custom-preview-bg" class="custom-preview-bg"></div>
+            <div id="custom-preview-overlay" class="custom-preview-overlay"></div>
+            <div class="custom-preview-content">
+              <div id="custom-preview-title" class="custom-preview-title"></div>
+              <div id="custom-preview-body" class="custom-preview-body">Escribe tu texto aquí...</div>
+            </div>
+          </div>
+
+          <!-- Background Selector -->
+          <div class="custom-bg-panel">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <label style="font-size:0.76rem; color:#cbd5e1; font-weight:700;">FONDO DE DIAPOSITIVA:</label>
+              <div class="cs-bg-tabs">
+                <button type="button" class="cs-bg-tab active" data-bgtype="video">🎬 Video HD</button>
+                <button type="button" class="cs-bg-tab" data-bgtype="gradient">🌈 Degradado</button>
+                <button type="button" class="cs-bg-tab" data-bgtype="color">🎨 Color</button>
+                <button type="button" class="cs-bg-tab" data-bgtype="image">🖼️ Imagen</button>
+              </div>
+            </div>
+
+            <!-- 1. Video Background Options -->
+            <div id="cs-bg-box-video" class="cs-bg-box">
+              <select id="cs-bg-video-select" class="control-select">
+                <!-- Populated dynamically with HD worship loops -->
+              </select>
+            </div>
+
+            <!-- 2. Gradient Preset Options -->
+            <div id="cs-bg-box-gradient" class="cs-bg-box hidden">
+              <div class="cs-gradient-swatches" id="cs-gradient-swatches">
+                <button type="button" class="cs-grad-btn" data-grad="linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%)" style="background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%)" title="Noche Profunda"></button>
+                <button type="button" class="cs-grad-btn" data-grad="linear-gradient(135deg, #422006 0%, #713f12 50%, #090d16 100%)" style="background:linear-gradient(135deg, #422006 0%, #713f12 50%, #090d16 100%)" title="Fuego Dorado"></button>
+                <button type="button" class="cs-grad-btn" data-grad="linear-gradient(135deg, #082f49 0%, #0369a1 50%, #020617 100%)" style="background:linear-gradient(135deg, #082f49 0%, #0369a1 50%, #020617 100%)" title="Océano Celestial"></button>
+                <button type="button" class="cs-grad-btn" data-grad="linear-gradient(135deg, #3b0764 0%, #7e22ce 50%, #090d16 100%)" style="background:linear-gradient(135deg, #3b0764 0%, #7e22ce 50%, #090d16 100%)" title="Majestad Púrpura"></button>
+                <button type="button" class="cs-grad-btn" data-grad="linear-gradient(135deg, #064e3b 0%, #047857 50%, #022c22 100%)" style="background:linear-gradient(135deg, #064e3b 0%, #047857 50%, #022c22 100%)" title="Esmeralda Viva"></button>
+                <button type="button" class="cs-grad-btn" data-grad="linear-gradient(135deg, #450a0a 0%, #991b1b 50%, #090d16 100%)" style="background:linear-gradient(135deg, #450a0a 0%, #991b1b 50%, #090d16 100%)" title="Carmesí"></button>
+              </div>
+            </div>
+
+            <!-- 3. Solid Color Options -->
+            <div id="cs-bg-box-color" class="cs-bg-box hidden">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <input type="color" id="cs-bg-color-input" value="#090d16" style="width:48px; height:34px; border:none; border-radius:6px; cursor:pointer; background:transparent;">
+                <span style="font-size:0.78rem; color:#94a3b8;">Elige cualquier color sólido para el fondo</span>
+              </div>
+            </div>
+
+            <!-- 4. Custom Image Options -->
+            <div id="cs-bg-box-image" class="cs-bg-box hidden">
+              <div style="display:flex; gap:6px; align-items:center;">
+                <select id="cs-bg-image-select" class="control-select" style="flex:1;">
+                  <!-- Populated from programMediaList images -->
+                </select>
+                <label class="action-btn btn-sm btn-ghost" style="cursor:pointer; margin:0; white-space:nowrap;">
+                  📤 Subir Foto
+                  <input type="file" id="cs-bg-image-upload" accept="image/*" style="display:none;">
+                </label>
+              </div>
+            </div>
+
+            <!-- Overlay Darkness Slider -->
+            <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+              <label style="font-size:0.74rem; color:#94a3b8; white-space:nowrap;">Oscurecer fondo (Contraste):</label>
+              <input type="range" id="cs-overlay-slider" min="0" max="0.85" step="0.05" value="0.35" style="flex:1;">
+              <span id="cs-overlay-val" style="font-size:0.74rem; color:#cbd5e1; min-width:34px;">35%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Text Content, Typography, Size, Colors & Formatting -->
+        <div class="custom-studio-right">
+          <div class="form-group">
+            <label>Título / Encabezado Superior (Opcional):</label>
+            <input type="text" id="cs-title-input" placeholder="Ej. BIENVENIDOS • AVISO IMPORTANTE • OFRENDAS">
+          </div>
+
+          <div class="form-group">
+            <label>Texto Principal (Soporta varios renglones):</label>
+            <textarea id="cs-text-input" rows="4" placeholder="Escribe aquí tu mensaje, anuncio, frase o lectura..."></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Tipografía (Fuente):</label>
+              <select id="cs-font-select" class="control-select">
+                <option value="'Montserrat', sans-serif">Montserrat (Moderna Impacto)</option>
+                <option value="'Inter', sans-serif">Inter (Limpia Sans-Serif)</option>
+                <option value="'Playfair Display', serif">Playfair Display (Elegante Editorial)</option>
+                <option value="'Cinzel', serif">Cinzel (Clásica / Cinematográfica)</option>
+                <option value="'Oswald', sans-serif">Oswald (Condensada Fuerte)</option>
+                <option value="'Dancing Script', cursive">Dancing Script (Manuscrita / Cursiva)</option>
+                <option value="'Fira Code', monospace">Fira Code (Monospace)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Tamaño de Letra: <span id="cs-size-label" style="color:#38bdf8;">5.0</span></label>
+              <input type="range" id="cs-size-slider" min="2.2" max="9.5" step="0.2" value="5.0" style="margin-top:8px;">
+            </div>
+          </div>
+
+          <!-- Colors & Alignment -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>Color del Texto Principal:</label>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <input type="color" id="cs-text-color" value="#ffffff" style="width:36px; height:32px; border:none; background:transparent; cursor:pointer;">
+                <div class="cs-color-swatches">
+                  <button type="button" class="cs-swatch" data-color="#ffffff" style="background:#ffffff;" title="Blanco"></button>
+                  <button type="button" class="cs-swatch" data-color="#fde047" style="background:#fde047;" title="Dorado"></button>
+                  <button type="button" class="cs-swatch" data-color="#38bdf8" style="background:#38bdf8;" title="Celeste"></button>
+                  <button type="button" class="cs-swatch" data-color="#4ade80" style="background:#4ade80;" title="Verde"></button>
+                  <button type="button" class="cs-swatch" data-color="#f472b6" style="background:#f472b6;" title="Rosa"></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Color del Título Superior:</label>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <input type="color" id="cs-title-color" value="#fde047" style="width:36px; height:32px; border:none; background:transparent; cursor:pointer;">
+                <div class="cs-color-swatches">
+                  <button type="button" class="cs-title-swatch" data-color="#fde047" style="background:#fde047;" title="Dorado"></button>
+                  <button type="button" class="cs-title-swatch" data-color="#38bdf8" style="background:#38bdf8;" title="Celeste"></button>
+                  <button type="button" class="cs-title-swatch" data-color="#ffffff" style="background:#ffffff;" title="Blanco"></button>
+                  <button type="button" class="cs-title-swatch" data-color="#c084fc" style="background:#c084fc;" title="Violeta"></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Alignment & Style Toggles -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>Alineación:</label>
+              <div class="cs-toggle-group">
+                <button type="button" class="cs-align-btn" data-align="left">⬅ Izq</button>
+                <button type="button" class="cs-align-btn active" data-align="center">↔ Centro</button>
+                <button type="button" class="cs-align-btn" data-align="right">Der ➡</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Estilo de Texto:</label>
+              <div class="cs-toggle-group">
+                <button type="button" id="cs-btn-italic" class="cs-style-btn" title="Cursiva"><em>I</em> Cursiva</button>
+                <button type="button" id="cs-btn-uppercase" class="cs-style-btn" title="Convertir a Mayúsculas">AA Mayús</button>
+                <button type="button" id="cs-btn-shadow" class="cs-style-btn active" title="Sombra de contraste">🌑 Sombra</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-actions" style="margin-top:auto; padding-top:10px; display:flex; gap:8px; justify-content:flex-end;">
+            <button type="button" id="btn-cs-save" class="action-btn btn-ghost" style="flex:1; justify-content:center;">
+              💾 Guardar en Repertorio
+            </button>
+            <button type="button" id="btn-cs-project-live" class="action-btn btn-primary" style="flex:1.2; justify-content:center;">
+              🔴 Guardar y Proyectar Ahora
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Download Bible Modal -->
   <div id="download-bible-modal" class="modal-overlay hidden">
     <div class="modal-card">
@@ -273,12 +459,15 @@ Glorioso día..."></textarea>
           </div>
 
           <!-- Quick Add Buttons inside Repertorio -->
-          <div class="repertorio-create-bar" style="display:flex; gap:6px; margin-top:10px;">
-            <button id="btn-repertorio-add-song" class="action-btn btn-sm btn-primary" style="flex:1; justify-content:center; padding:7px 8px; font-size:0.76rem;" title="Crear o agregar una canción a este repertorio">
+          <div class="repertorio-create-bar" style="display:flex; gap:5px; margin-top:10px;">
+            <button id="btn-repertorio-add-song" class="action-btn btn-sm btn-primary" style="flex:1; justify-content:center; padding:7px 6px; font-size:0.74rem;" title="Crear o agregar una canción a este repertorio">
               ➕ Canción
             </button>
-            <button id="btn-repertorio-add-space" class="action-btn btn-sm btn-accent" style="flex:1.15; justify-content:center; padding:7px 8px; font-size:0.76rem;" title="Crear un espacio donde arrastrar imágenes o videos">
-              🗂️ + Espacio (Fotos/Video)
+            <button id="btn-repertorio-add-space" class="action-btn btn-sm btn-accent" style="flex:1.1; justify-content:center; padding:7px 6px; font-size:0.74rem;" title="Crear un espacio donde arrastrar imágenes o videos">
+              🗂️ + Espacio
+            </button>
+            <button id="btn-repertorio-add-custom" class="action-btn btn-sm" style="flex:1.1; justify-content:center; padding:7px 6px; font-size:0.74rem; background:linear-gradient(135deg,#ec4899,#8b5cf6); color:#fff; border:none;" title="Crear un anuncio o diapositiva editable al instante (fuente, tamaño, color, fondo)">
+              🎨 + Editable
             </button>
           </div>
 
@@ -293,7 +482,7 @@ Glorioso día..."></textarea>
         </div>
 
         <div class="panel-footer-actions">
-          <small style="color:#94a3b8; font-size:0.72rem;">💡 Crea <strong>Canciones</strong> o <strong>Espacios</strong> arriba, o agrega desde el catálogo.</small>
+          <small style="color:#94a3b8; font-size:0.72rem;">💡 Crea <strong>Canciones</strong>, <strong>Espacios</strong> u <strong>Objetos Editables 🎨</strong> arriba.</small>
         </div>
       </div>
 
@@ -644,6 +833,27 @@ Glorioso día..."></textarea>
               🔄 Reiniciar
             </button>
           </div>
+        </div>
+      </section>
+
+      <!-- Custom Editable Object Projection Deck -->
+      <section class="bible-playback-deck hidden" id="custom-playback-deck">
+        <div class="deck-header">
+          <div class="deck-title-box">
+            <span class="deck-badge" style="background:linear-gradient(135deg,#ec4899,#8b5cf6); color:#fff;">🎨 PROYECTANDO OBJETO EDITABLE EN VIVO</span>
+            <h3 id="custom-deck-title" class="deck-filename">Anuncio Editable</h3>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button id="btn-custom-deck-edit" class="action-btn btn-primary">
+              🎨 Editar en Vivo Ahora
+            </button>
+            <button id="btn-custom-stop" class="action-btn btn-danger-dark">
+              ⏹ Quitar y Volver a Letras
+            </button>
+          </div>
+        </div>
+        <div class="bible-deck-content">
+          <p id="custom-deck-text" class="bible-deck-text"></p>
         </div>
       </section>
 

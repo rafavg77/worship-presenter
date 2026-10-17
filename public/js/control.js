@@ -539,6 +539,497 @@ if (btnSaveNewSpace) {
   });
 }
 
+// ==========================================
+// 1B. ESTUDIO DE OBJETO EDITABLE (CUSTOM SLIDE)
+// ==========================================
+const btnRepertorioAddCustom = document.getElementById('btn-repertorio-add-custom');
+const customSlideModal = document.getElementById('custom-slide-modal');
+const btnCloseCustomModal = document.getElementById('btn-close-custom-modal');
+const csLiveSyncBadge = document.getElementById('cs-live-sync-badge');
+
+// Preview elements inside modal
+const customPreviewStage = document.getElementById('custom-preview-stage');
+const customPreviewVideo = document.getElementById('custom-preview-video');
+const customPreviewBg = document.getElementById('custom-preview-bg');
+const customPreviewOverlay = document.getElementById('custom-preview-overlay');
+const customPreviewTitle = document.getElementById('custom-preview-title');
+const customPreviewBody = document.getElementById('custom-preview-body');
+
+// Inputs inside modal
+const csTitleInput = document.getElementById('cs-title-input');
+const csTextInput = document.getElementById('cs-text-input');
+const csFontSelect = document.getElementById('cs-font-select');
+const csSizeSlider = document.getElementById('cs-size-slider');
+const csSizeLabel = document.getElementById('cs-size-label');
+const csTextColor = document.getElementById('cs-text-color');
+const csTitleColor = document.getElementById('cs-title-color');
+const csBtnItalic = document.getElementById('cs-btn-italic');
+const csBtnUppercase = document.getElementById('cs-btn-uppercase');
+const csBtnShadow = document.getElementById('cs-btn-shadow');
+const csOverlaySlider = document.getElementById('cs-overlay-slider');
+const csOverlayVal = document.getElementById('cs-overlay-val');
+
+const csBgTabs = document.querySelectorAll('.cs-bg-tab');
+const csBgBoxVideo = document.getElementById('cs-bg-box-video');
+const csBgBoxGradient = document.getElementById('cs-bg-box-gradient');
+const csBgBoxColor = document.getElementById('cs-bg-box-color');
+const csBgBoxImage = document.getElementById('cs-bg-box-image');
+const csBgVideoSelect = document.getElementById('cs-bg-video-select');
+const csBgColorInput = document.getElementById('cs-bg-color-input');
+const csBgImageSelect = document.getElementById('cs-bg-image-select');
+const csBgImageUpload = document.getElementById('cs-bg-image-upload');
+
+const btnCsSave = document.getElementById('btn-cs-save');
+const btnCsProjectLive = document.getElementById('btn-cs-project-live');
+
+let editingCustomTarget = null; // reference to existing item if editing
+let editingCustomTargetSpace = null; // reference to space if adding/editing inside a space
+let currentCustomDraft = {
+  id: '',
+  type: 'custom',
+  mediaType: 'custom',
+  title: 'BIENVENIDOS',
+  text: 'Escribe tu anuncio o mensaje aquí...',
+  fontFamily: "'Montserrat', sans-serif",
+  fontSizeVw: 5.0,
+  textColor: '#ffffff',
+  titleColor: '#fde047',
+  textAlign: 'center',
+  fontWeight: '800',
+  fontStyle: 'normal',
+  uppercase: false,
+  textShadow: 'strong',
+  bgType: 'video',
+  bgValue: '/videos/01_fondo_particulas_doradas.mp4',
+  overlayOpacity: 0.35
+};
+
+function populateCustomModalMediaSelects() {
+  if (csBgVideoSelect) {
+    csBgVideoSelect.innerHTML = '';
+    const vids = (backgroundVideosList && backgroundVideosList.length > 0)
+      ? backgroundVideosList
+      : [{ filename: '01_fondo_particulas_doradas.mp4', url: '/videos/01_fondo_particulas_doradas.mp4' }];
+    vids.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.url;
+      opt.innerText = `🎬 ${v.filename}`;
+      if (currentCustomDraft.bgType === 'video' && currentCustomDraft.bgValue === v.url) {
+        opt.selected = true;
+      }
+      csBgVideoSelect.appendChild(opt);
+    });
+  }
+
+  if (csBgImageSelect) {
+    csBgImageSelect.innerHTML = '';
+    const imgs = (programMediaList || []).filter(m => m.mediaType === 'image');
+    if (imgs.length === 0) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.innerText = 'Sube una imagen con el botón de al lado 👉';
+      csBgImageSelect.appendChild(opt);
+    } else {
+      imgs.forEach(img => {
+        const opt = document.createElement('option');
+        opt.value = img.url;
+        opt.innerText = `🖼️ ${img.filename}`;
+        if (currentCustomDraft.bgType === 'image' && currentCustomDraft.bgValue === img.url) {
+          opt.selected = true;
+        }
+        csBgImageSelect.appendChild(opt);
+      });
+    }
+  }
+}
+
+function setCustomBgTabUI(bgType) {
+  csBgTabs.forEach(t => t.classList.toggle('active', t.dataset.bgtype === bgType));
+  if (csBgBoxVideo) csBgBoxVideo.classList.toggle('hidden', bgType !== 'video');
+  if (csBgBoxGradient) csBgBoxGradient.classList.toggle('hidden', bgType !== 'gradient');
+  if (csBgBoxColor) csBgBoxColor.classList.toggle('hidden', bgType !== 'color');
+  if (csBgBoxImage) csBgBoxImage.classList.toggle('hidden', bgType !== 'image');
+}
+
+function isCustomDraftCurrentlyLive() {
+  if (!appState || appState.mediaMode !== 'custom' || !appState.currentCustomSlide) return false;
+  return Boolean(editingCustomTarget && appState.currentCustomSlide.id === editingCustomTarget.id);
+}
+
+function updateCustomPreviewAndSync() {
+  const d = currentCustomDraft;
+  // 1. Background in 16:9 preview stage
+  if (d.bgType === 'video' && d.bgValue) {
+    if (customPreviewVideo.getAttribute('src') !== d.bgValue) {
+      customPreviewVideo.setAttribute('src', d.bgValue);
+      customPreviewVideo.load();
+      customPreviewVideo.play().catch(() => {});
+    }
+    customPreviewVideo.classList.remove('hidden');
+    customPreviewBg.style.background = 'transparent';
+  } else {
+    customPreviewVideo.pause();
+    customPreviewVideo.classList.add('hidden');
+    if (d.bgType === 'image' && d.bgValue) {
+      customPreviewBg.style.background = `url("${d.bgValue}") center / cover no-repeat`;
+    } else {
+      customPreviewBg.style.background = d.bgValue || '#090d16';
+    }
+  }
+
+  // 2. Overlay opacity
+  const op = typeof d.overlayOpacity === 'number' ? d.overlayOpacity : 0.35;
+  customPreviewOverlay.style.background = `rgba(0, 0, 0, ${op})`;
+
+  // 3. Title & Body typography (scaled proportionally to preview box width)
+  const stageWidth = customPreviewStage.clientWidth || 420;
+  const bodyPx = Math.max(12, ( (d.fontSizeVw || 5.0) / 100 ) * stageWidth);
+  const titlePx = Math.max(10, bodyPx * 0.45);
+
+  if (d.title && d.title.trim()) {
+    customPreviewTitle.innerText = d.title;
+    customPreviewTitle.style.display = 'block';
+    customPreviewTitle.style.fontFamily = d.fontFamily || "'Montserrat', sans-serif";
+    customPreviewTitle.style.color = d.titleColor || '#fde047';
+    customPreviewTitle.style.textAlign = d.textAlign || 'center';
+    customPreviewTitle.style.fontSize = `${titlePx}px`;
+  } else {
+    customPreviewTitle.innerText = '';
+    customPreviewTitle.style.display = 'none';
+  }
+
+  customPreviewBody.innerText = d.text || '';
+  customPreviewBody.style.fontFamily = d.fontFamily || "'Montserrat', sans-serif";
+  customPreviewBody.style.fontSize = `${bodyPx}px`;
+  customPreviewBody.style.color = d.textColor || '#ffffff';
+  customPreviewBody.style.textAlign = d.textAlign || 'center';
+  customPreviewBody.style.fontWeight = d.fontWeight || '800';
+  customPreviewBody.style.fontStyle = d.fontStyle || 'normal';
+  customPreviewBody.style.textTransform = d.uppercase ? 'uppercase' : 'none';
+  customPreviewBody.style.textShadow = d.textShadow === 'none'
+    ? 'none'
+    : '0 3px 12px rgba(0,0,0,0.9), 0 1px 4px rgba(0,0,0,0.95)';
+
+  // 4. If this custom slide is LIVE right now on the projector, stream changes in real time!
+  const isLiveNow = isCustomDraftCurrentlyLive();
+  if (csLiveSyncBadge) csLiveSyncBadge.classList.toggle('hidden', !isLiveNow);
+  if (isLiveNow) {
+    if (editingCustomTarget) Object.assign(editingCustomTarget, d);
+    socket.emit('project-custom-slide', d);
+  }
+}
+
+function openCustomSlideModal(existingItem = null, targetSpace = null) {
+  editingCustomTarget = existingItem || null;
+  editingCustomTargetSpace = targetSpace || null;
+
+  const defaultBgVideo = (backgroundVideosList && backgroundVideosList[0])
+    ? backgroundVideosList[0].url
+    : '/videos/01_fondo_particulas_doradas.mp4';
+
+  if (existingItem) {
+    currentCustomDraft = {
+      id: existingItem.id || `custom_${Date.now()}`,
+      type: 'custom',
+      mediaType: 'custom',
+      title: existingItem.title ?? '',
+      text: existingItem.text ?? '',
+      fontFamily: existingItem.fontFamily || "'Montserrat', sans-serif",
+      fontSizeVw: Number(existingItem.fontSizeVw) || 5.0,
+      textColor: existingItem.textColor || '#ffffff',
+      titleColor: existingItem.titleColor || '#fde047',
+      textAlign: existingItem.textAlign || 'center',
+      fontWeight: existingItem.fontWeight || '800',
+      fontStyle: existingItem.fontStyle || 'normal',
+      uppercase: Boolean(existingItem.uppercase),
+      textShadow: existingItem.textShadow || 'strong',
+      bgType: existingItem.bgType || 'video',
+      bgValue: existingItem.bgValue || defaultBgVideo,
+      overlayOpacity: typeof existingItem.overlayOpacity === 'number' ? existingItem.overlayOpacity : 0.35
+    };
+  } else {
+    currentCustomDraft = {
+      id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      type: 'custom',
+      mediaType: 'custom',
+      title: 'BIENVENIDOS',
+      text: 'Escribe aquí tu anuncio, frase o aviso en vivo...',
+      fontFamily: "'Montserrat', sans-serif",
+      fontSizeVw: 5.0,
+      textColor: '#ffffff',
+      titleColor: '#fde047',
+      textAlign: 'center',
+      fontWeight: '800',
+      fontStyle: 'normal',
+      uppercase: false,
+      textShadow: 'strong',
+      bgType: 'video',
+      bgValue: defaultBgVideo,
+      overlayOpacity: 0.35
+    };
+  }
+
+  populateCustomModalMediaSelects();
+
+  // Populate inputs from currentCustomDraft
+  csTitleInput.value = currentCustomDraft.title;
+  csTextInput.value = currentCustomDraft.text;
+  csFontSelect.value = currentCustomDraft.fontFamily;
+  csSizeSlider.value = currentCustomDraft.fontSizeVw;
+  csSizeLabel.innerText = Number(currentCustomDraft.fontSizeVw).toFixed(1);
+  csTextColor.value = currentCustomDraft.textColor;
+  csTitleColor.value = currentCustomDraft.titleColor;
+  csOverlaySlider.value = currentCustomDraft.overlayOpacity;
+  csOverlayVal.innerText = `${Math.round(currentCustomDraft.overlayOpacity * 100)}%`;
+
+  document.querySelectorAll('.cs-align-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.align === currentCustomDraft.textAlign);
+  });
+  csBtnItalic.classList.toggle('active', currentCustomDraft.fontStyle === 'italic');
+  csBtnUppercase.classList.toggle('active', Boolean(currentCustomDraft.uppercase));
+  csBtnShadow.classList.toggle('active', currentCustomDraft.textShadow !== 'none');
+
+  setCustomBgTabUI(currentCustomDraft.bgType);
+  if (currentCustomDraft.bgType === 'color' && csBgColorInput) {
+    csBgColorInput.value = currentCustomDraft.bgValue || '#090d16';
+  }
+
+  customSlideModal.classList.remove('hidden');
+  setTimeout(() => {
+    updateCustomPreviewAndSync();
+    csTextInput.focus();
+  }, 40);
+}
+
+if (btnRepertorioAddCustom) {
+  btnRepertorioAddCustom.addEventListener('click', () => {
+    // If an Espacio is currently open in center workspace, offer adding directly or to repertorio
+    openCustomSlideModal(null, null);
+  });
+}
+
+if (btnCloseCustomModal) {
+  btnCloseCustomModal.addEventListener('click', () => {
+    customPreviewVideo.pause();
+    customSlideModal.classList.add('hidden');
+  });
+}
+
+// Wire up live preview listeners
+[csTitleInput, csTextInput].forEach(inp => {
+  if (!inp) return;
+  inp.addEventListener('input', () => {
+    currentCustomDraft.title = csTitleInput.value;
+    currentCustomDraft.text = csTextInput.value;
+    updateCustomPreviewAndSync();
+  });
+});
+
+if (csFontSelect) {
+  csFontSelect.addEventListener('change', () => {
+    currentCustomDraft.fontFamily = csFontSelect.value;
+    updateCustomPreviewAndSync();
+  });
+}
+
+if (csSizeSlider) {
+  csSizeSlider.addEventListener('input', () => {
+    currentCustomDraft.fontSizeVw = parseFloat(csSizeSlider.value);
+    csSizeLabel.innerText = currentCustomDraft.fontSizeVw.toFixed(1);
+    updateCustomPreviewAndSync();
+  });
+}
+
+if (csTextColor) {
+  csTextColor.addEventListener('input', () => {
+    currentCustomDraft.textColor = csTextColor.value;
+    updateCustomPreviewAndSync();
+  });
+}
+
+document.querySelectorAll('.cs-swatch').forEach(sw => {
+  sw.addEventListener('click', () => {
+    currentCustomDraft.textColor = sw.dataset.color;
+    csTextColor.value = sw.dataset.color;
+    updateCustomPreviewAndSync();
+  });
+});
+
+if (csTitleColor) {
+  csTitleColor.addEventListener('input', () => {
+    currentCustomDraft.titleColor = csTitleColor.value;
+    updateCustomPreviewAndSync();
+  });
+}
+
+document.querySelectorAll('.cs-title-swatch').forEach(sw => {
+  sw.addEventListener('click', () => {
+    currentCustomDraft.titleColor = sw.dataset.color;
+    csTitleColor.value = sw.dataset.color;
+    updateCustomPreviewAndSync();
+  });
+});
+
+document.querySelectorAll('.cs-align-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cs-align-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCustomDraft.textAlign = btn.dataset.align;
+    updateCustomPreviewAndSync();
+  });
+});
+
+if (csBtnItalic) {
+  csBtnItalic.addEventListener('click', () => {
+    currentCustomDraft.fontStyle = currentCustomDraft.fontStyle === 'italic' ? 'normal' : 'italic';
+    csBtnItalic.classList.toggle('active', currentCustomDraft.fontStyle === 'italic');
+    updateCustomPreviewAndSync();
+  });
+}
+
+if (csBtnUppercase) {
+  csBtnUppercase.addEventListener('click', () => {
+    currentCustomDraft.uppercase = !currentCustomDraft.uppercase;
+    csBtnUppercase.classList.toggle('active', currentCustomDraft.uppercase);
+    updateCustomPreviewAndSync();
+  });
+}
+
+if (csBtnShadow) {
+  csBtnShadow.addEventListener('click', () => {
+    currentCustomDraft.textShadow = currentCustomDraft.textShadow === 'none' ? 'strong' : 'none';
+    csBtnShadow.classList.toggle('active', currentCustomDraft.textShadow !== 'none');
+    updateCustomPreviewAndSync();
+  });
+}
+
+if (csOverlaySlider) {
+  csOverlaySlider.addEventListener('input', () => {
+    currentCustomDraft.overlayOpacity = parseFloat(csOverlaySlider.value);
+    csOverlayVal.innerText = `${Math.round(currentCustomDraft.overlayOpacity * 100)}%`;
+    updateCustomPreviewAndSync();
+  });
+}
+
+// Background Type Tabs
+csBgTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    const bgType = tab.dataset.bgtype;
+    currentCustomDraft.bgType = bgType;
+    setCustomBgTabUI(bgType);
+
+    if (bgType === 'video' && csBgVideoSelect && csBgVideoSelect.value) {
+      currentCustomDraft.bgValue = csBgVideoSelect.value;
+    } else if (bgType === 'gradient') {
+      currentCustomDraft.bgValue = 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%)';
+    } else if (bgType === 'color') {
+      currentCustomDraft.bgValue = csBgColorInput ? csBgColorInput.value : '#090d16';
+    } else if (bgType === 'image' && csBgImageSelect && csBgImageSelect.value) {
+      currentCustomDraft.bgValue = csBgImageSelect.value;
+    }
+    updateCustomPreviewAndSync();
+  });
+});
+
+if (csBgVideoSelect) {
+  csBgVideoSelect.addEventListener('change', () => {
+    currentCustomDraft.bgType = 'video';
+    currentCustomDraft.bgValue = csBgVideoSelect.value;
+    updateCustomPreviewAndSync();
+  });
+}
+
+document.querySelectorAll('.cs-grad-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cs-grad-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCustomDraft.bgType = 'gradient';
+    currentCustomDraft.bgValue = btn.dataset.grad;
+    updateCustomPreviewAndSync();
+  });
+});
+
+if (csBgColorInput) {
+  csBgColorInput.addEventListener('input', () => {
+    currentCustomDraft.bgType = 'color';
+    currentCustomDraft.bgValue = csBgColorInput.value;
+    updateCustomPreviewAndSync();
+  });
+}
+
+if (csBgImageSelect) {
+  csBgImageSelect.addEventListener('change', () => {
+    if (csBgImageSelect.value) {
+      currentCustomDraft.bgType = 'image';
+      currentCustomDraft.bgValue = csBgImageSelect.value;
+      updateCustomPreviewAndSync();
+    }
+  });
+}
+
+if (csBgImageUpload) {
+  csBgImageUpload.addEventListener('change', async (e) => {
+    const file = (e.target.files || [])[0];
+    if (!file) return;
+    try {
+      const uploaded = await uploadFileAndReturnMedia(file, 'media');
+      currentCustomDraft.bgType = 'image';
+      currentCustomDraft.bgValue = uploaded.url;
+      populateCustomModalMediaSelects();
+      if (csBgImageSelect) csBgImageSelect.value = uploaded.url;
+      updateCustomPreviewAndSync();
+      showToast(`🖼️ Imagen de fondo subida: ${uploaded.filename}`);
+    } catch (err) {
+      alert('Error subiendo imagen: ' + err.message);
+    }
+    csBgImageUpload.value = '';
+  });
+}
+
+function saveCustomDraftToTarget() {
+  const copy = { ...currentCustomDraft };
+  if (editingCustomTarget) {
+    Object.assign(editingCustomTarget, copy);
+    saveActivePlaylist();
+    if (editingCustomTargetSpace) {
+      socket.emit('select-space', { spaceId: editingCustomTargetSpace.id, space: editingCustomTargetSpace });
+    }
+    return editingCustomTarget;
+  }
+
+  if (editingCustomTargetSpace) {
+    if (!Array.isArray(editingCustomTargetSpace.items)) editingCustomTargetSpace.items = [];
+    editingCustomTargetSpace.items.push(copy);
+    saveActivePlaylist();
+    socket.emit('select-space', { spaceId: editingCustomTargetSpace.id, space: editingCustomTargetSpace });
+    editingCustomTarget = copy;
+    return copy;
+  }
+
+  addItemToActivePlaylist(copy);
+  editingCustomTarget = copy;
+  return copy;
+}
+
+if (btnCsSave) {
+  btnCsSave.addEventListener('click', () => {
+    const saved = saveCustomDraftToTarget();
+    customPreviewVideo.pause();
+    customSlideModal.classList.add('hidden');
+    showToast(`💾 Objeto editable guardado: "${saved.title || saved.text.slice(0, 25)}"`);
+  });
+}
+
+if (btnCsProjectLive) {
+  btnCsProjectLive.addEventListener('click', () => {
+    const saved = saveCustomDraftToTarget();
+    socket.emit('project-custom-slide', saved);
+    customPreviewVideo.pause();
+    customSlideModal.classList.add('hidden');
+    showToast(`🔴 Proyectando en vivo: "${saved.title || saved.text.slice(0, 25)}"`);
+  });
+}
+
 function renderPlaylistItems() {
   playlistItemsList.innerHTML = '';
   const items = (activePlaylist && activePlaylist.items) ? activePlaylist.items : [];
@@ -547,7 +1038,7 @@ function renderPlaylistItems() {
   if (items.length === 0) {
     playlistItemsList.innerHTML = `
       <div style="color:#64748b; padding:16px; font-size:0.8rem; text-align:center;">
-        Este repertorio está vacío.<br>Usa los botones <strong>➕ Canción</strong> o <strong>🗂️ + Espacio (Fotos/Video)</strong> arriba para armar tu servicio.
+        Este repertorio está vacío.<br>Usa los botones <strong>➕ Canción</strong>, <strong>🗂️ + Espacio</strong> o <strong>🎨 + Editable</strong> arriba para armar tu servicio.
       </div>
     `;
     return;
@@ -557,7 +1048,8 @@ function renderPlaylistItems() {
     const card = document.createElement('div');
     const isActiveSong = item.type === 'song' && appState && appState.workspaceMode !== 'space' && appState.currentSongId === item.songId;
     const isActiveSpace = item.type === 'space' && appState && appState.workspaceMode === 'space' && appState.currentSpaceId === item.id;
-    card.className = `playlist-item-card ${(isActiveSong || isActiveSpace) ? 'active' : ''}`;
+    const isActiveCustom = item.type === 'custom' && appState && appState.mediaMode === 'custom' && appState.currentCustomSlide && appState.currentCustomSlide.id === item.id;
+    card.className = `playlist-item-card ${(isActiveSong || isActiveSpace || isActiveCustom) ? 'active' : ''}`;
 
     let icon = '📄';
     let title = item.title || item.reference || item.filename || 'Elemento';
@@ -572,7 +1064,11 @@ function renderPlaylistItems() {
     } else if (item.type === 'space') {
       icon = '🗂️';
       const count = Array.isArray(item.items) ? item.items.length : 0;
-      sub = `Espacio Multimedia • ${count} archivo${count === 1 ? '' : 's'} (arrastra fotos/videos)`;
+      sub = `Espacio Multimedia • ${count} elemento${count === 1 ? '' : 's'} (fotos/videos/editables)`;
+    } else if (item.type === 'custom') {
+      icon = '🎨';
+      title = item.title ? `${item.title}` : (item.text || 'Objeto Editable').slice(0, 32);
+      sub = `Editable • ${(item.text || '').replace(/\n/g, ' ').slice(0, 38)}`;
     } else if (isImage) {
       icon = '🖼️';
       sub = 'Foto / Flyer de Servicio';
@@ -597,11 +1093,20 @@ function renderPlaylistItems() {
         <div class="playlist-item-sub">${escapeHtml(sub)}</div>
       </div>
       <div class="playlist-item-actions">
+        ${item.type === 'custom' ? `<button class="btn-item-ctrl btn-edit-custom" title="Editar texto, fuente, tamaño y fondo" style="color:#f472b6; border-color:#f472b6;">✎</button>` : ''}
         <button class="btn-item-ctrl btn-move-up" title="Subir">▲</button>
         <button class="btn-item-ctrl btn-move-down" title="Bajar">▼</button>
         <button class="btn-item-ctrl btn-item-danger btn-remove-item" title="Eliminar">✕</button>
       </div>
     `;
+
+    const btnEditCustom = card.querySelector('.btn-edit-custom');
+    if (btnEditCustom) {
+      btnEditCustom.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openCustomSlideModal(item, null);
+      });
+    }
 
     // Allow dropping files directly onto a Space card in the sidebar too!
     if (item.type === 'space') {
@@ -696,6 +1201,9 @@ function launchPlaylistItem(item) {
   } else if (item.type === 'space') {
     socket.emit('select-space', { spaceId: item.id, space: item });
     showToast(`🗂️ Espacio abierto: ${item.title}`);
+  } else if (item.type === 'custom') {
+    socket.emit('project-custom-slide', item);
+    showToast(`🎨 Proyectando objeto editable: ${item.title || 'Diseño en vivo'}`);
   } else if (isImage) {
     socket.emit('project-media', { url: item.url, filename: item.filename || item.title, mediaType: 'image' });
     showToast(`🖼️ Proyectando imagen: ${item.filename || item.title}`);
@@ -1411,6 +1919,45 @@ window.addEventListener('keydown', (e) => {
 // ==========================================
 // 9. UPDATE UI BASED ON GLOBAL STATE
 // ==========================================
+const customModePill = document.getElementById('custom-mode-pill');
+const customPlaybackDeck = document.getElementById('custom-playback-deck');
+const customDeckTitle = document.getElementById('custom-deck-title');
+const customDeckText = document.getElementById('custom-deck-text');
+const btnCustomDeckEdit = document.getElementById('btn-custom-deck-edit');
+const btnCustomStop = document.getElementById('btn-custom-stop');
+
+if (btnCustomStop) {
+  btnCustomStop.addEventListener('click', () => socket.emit('stop-foreground-video'));
+}
+
+if (btnCustomDeckEdit) {
+  btnCustomDeckEdit.addEventListener('click', () => {
+    if (appState && appState.currentCustomSlide) {
+      // Find matching item in activePlaylist if it exists so edits also save to playlist
+      let targetItem = appState.currentCustomSlide;
+      let targetSp = null;
+      if (activePlaylist && Array.isArray(activePlaylist.items)) {
+        const topMatch = activePlaylist.items.find(it => it.type === 'custom' && it.id === appState.currentCustomSlide.id);
+        if (topMatch) {
+          targetItem = topMatch;
+        } else {
+          for (const sp of activePlaylist.items) {
+            if (sp.type === 'space' && Array.isArray(sp.items)) {
+              const spMatch = sp.items.find(m => (m.type === 'custom' || m.mediaType === 'custom') && m.id === appState.currentCustomSlide.id);
+              if (spMatch) {
+                targetItem = spMatch;
+                targetSp = sp;
+                break;
+              }
+            }
+          }
+        }
+      }
+      openCustomSlideModal(targetItem, targetSp);
+    }
+  });
+}
+
 function updateUI(state) {
   if (!state) return;
   appState = state;
@@ -1437,6 +1984,7 @@ function updateUI(state) {
   imageModePill.classList.toggle('hidden', state.mediaMode !== 'image');
   bibleModePill.classList.toggle('hidden', state.mediaMode !== 'bible');
   countdownModePill.classList.toggle('hidden', state.mediaMode !== 'countdown');
+  if (customModePill) customModePill.classList.toggle('hidden', state.mediaMode !== 'custom');
 
   // 3. Center Workspace Decks Switching
   const mode = state.mediaMode || 'lyrics';
@@ -1447,6 +1995,9 @@ function updateUI(state) {
   imagePlaybackDeck.classList.toggle('hidden', !(mode === 'image' && state.currentProgramMedia && !isSpaceWorkspace));
   biblePlaybackDeck.classList.toggle('hidden', !(mode === 'bible' && state.currentBible));
   countdownPlaybackDeck.classList.toggle('hidden', !(mode === 'countdown' && state.countdown));
+  if (customPlaybackDeck) {
+    customPlaybackDeck.classList.toggle('hidden', !(mode === 'custom' && state.currentCustomSlide && !isSpaceWorkspace));
+  }
 
   // Keep slidesGridContainer visible when in lyrics mode OR when an Espacio is open!
   const showGrid = isSpaceWorkspace || mode === 'lyrics';
@@ -1478,6 +2029,14 @@ function updateUI(state) {
     nextPreviewText.innerText = isSpaceWorkspace
       ? 'Usa Siguiente ▶ o haz clic en otra tarjeta del Espacio'
       : 'Presiona "⏹ Quitar Imagen y Volver a Letras" para reanudar';
+  } else if (mode === 'custom' && state.currentCustomSlide) {
+    if (customDeckTitle) customDeckTitle.innerText = state.currentCustomSlide.title || 'Objeto Editable';
+    if (customDeckText) customDeckText.innerText = state.currentCustomSlide.text || '';
+
+    livePreviewText.innerText = `🎨 [EDITABLE EN VIVO] ${state.currentCustomSlide.title ? state.currentCustomSlide.title + ': ' : ''}${(state.currentCustomSlide.text || '').replace(/\n/g, ' / ')}`;
+    nextPreviewText.innerText = isSpaceWorkspace
+      ? 'Usa Siguiente ▶ o haz clic en "✎ Editar" en la tarjeta'
+      : 'Haz clic en "🎨 Editar en Vivo Ahora" para modificar texto, fuente o fondo en vivo';
   } else if (mode === 'bible' && state.currentBible) {
     bibleDeckRef.innerText = `${state.currentBible.displayRef || state.currentBible.reference} (${state.currentBible.version || 'RVR1960'})`;
     bibleDeckText.innerText = state.currentBible.text;
@@ -1505,12 +2064,13 @@ function updateUI(state) {
       const sItems = Array.isArray(activeSpace.items) ? activeSpace.items : [];
       const imgCount = sItems.filter(i => i.mediaType === 'image').length;
       const vidCount = sItems.filter(i => i.mediaType === 'video').length;
+      const customCount = sItems.filter(i => i.type === 'custom' || i.mediaType === 'custom').length;
 
       currentSongTitle.innerText = `🗂️ ${activeSpace.title}`;
-      currentSongArtist.innerText = `Espacio Multimedia • Repertorio: ${activePlaylist ? activePlaylist.name : ''} • Arrastra imágenes o videos abajo`;
-      badgeKey.innerText = `🖼️ Fotos: ${imgCount}`;
+      currentSongArtist.innerText = `Espacio Multimedia • Repertorio: ${activePlaylist ? activePlaylist.name : ''} • Arrastra imágenes, videos o crea objetos editables`;
+      badgeKey.innerText = `🖼️ Fotos: ${imgCount} • 🎨 Editables: ${customCount}`;
       badgeBpm.innerText = `🎬 Videos: ${vidCount}`;
-      badgeCount.innerText = `${sItems.length} Archivo${sItems.length === 1 ? '' : 's'}`;
+      badgeCount.innerText = `${sItems.length} Elemento${sItems.length === 1 ? '' : 's'}`;
 
       renderSpaceCards(activeSpace, state.currentSpaceSlideIndex);
     }
@@ -1608,24 +2168,38 @@ function renderSpaceCards(space, activeIndex) {
   slidesGridContainer.innerHTML = '';
   const items = Array.isArray(space.items) ? space.items : [];
 
-  // 1. Full-width Drag & Drop Banner at top of the Espacio
+  // 1. Full-width Drag & Drop Banner at top of the Espacio + Quick Custom Editable Button
   const dropBanner = document.createElement('div');
   dropBanner.className = 'space-dropzone-banner';
   dropBanner.innerHTML = `
     <div class="space-dropzone-inner" id="space-center-dropzone">
       <div class="space-dropzone-icon">📥🖼️🎬</div>
-      <div class="space-dropzone-texts">
+      <div class="space-dropzone-texts" style="flex:1;">
         <h4>Arrastra y suelta aquí tus Imágenes o Videos para "${escapeHtml(space.title)}"</h4>
-        <p>Soporta múltiples fotos (.jpg, .png, .webp) y videos (.mp4, .mov, .webm) • O haz clic para elegir archivos de tu computadora</p>
+        <p>Soporta múltiples fotos (.jpg, .png, .webp) y videos (.mp4, .mov, .webm) • O haz clic para elegir archivos</p>
       </div>
+      <button type="button" id="btn-space-add-custom" class="action-btn btn-sm" style="background:linear-gradient(135deg,#ec4899,#8b5cf6); color:#fff; border:none; padding:10px 14px; font-weight:800; flex-shrink:0;">
+        🎨 + Crear Diapositiva Editable Aquí
+      </button>
       <input type="file" id="space-file-input" multiple accept="image/*,video/mp4,video/webm,video/quicktime" style="display:none">
     </div>
   `;
 
   const dzInner = dropBanner.querySelector('#space-center-dropzone');
   const fileInp = dropBanner.querySelector('#space-file-input');
+  const btnSpaceAddCustom = dropBanner.querySelector('#btn-space-add-custom');
 
-  dzInner.addEventListener('click', () => fileInp.click());
+  if (btnSpaceAddCustom) {
+    btnSpaceAddCustom.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openCustomSlideModal(null, space);
+    });
+  }
+
+  dzInner.addEventListener('click', (e) => {
+    if (e.target.closest('#btn-space-add-custom')) return;
+    fileInp.click();
+  });
 
   fileInp.addEventListener('change', async (e) => {
     const files = Array.from(e.target.files || []);
@@ -1654,39 +2228,63 @@ function renderSpaceCards(space, activeIndex) {
 
   slidesGridContainer.appendChild(dropBanner);
 
-  // 2. Render each image/video card inside the Espacio
+  // 2. Render each image/video/custom card inside the Espacio
   if (items.length === 0) {
     const emptyHint = document.createElement('div');
     emptyHint.style.gridColumn = '1 / -1';
     emptyHint.style.textAlign = 'center';
     emptyHint.style.padding = '28px';
     emptyHint.style.color = '#94a3b8';
-    emptyHint.innerHTML = 'Este espacio aún no tiene imágenes ni videos. <strong>Arrastra archivos arriba</strong> o agrégalos desde la pestaña <strong>🖼️ Medios</strong>.';
+    emptyHint.innerHTML = 'Este espacio aún no tiene elementos. <strong>Arrastra fotos/videos arriba</strong> o usa <strong>🎨 + Crear Diapositiva Editable Aquí</strong>.';
     slidesGridContainer.appendChild(emptyHint);
     return;
   }
 
   items.forEach((mediaItem, idx) => {
     const card = document.createElement('div');
-    const isImage = mediaItem.mediaType === 'image';
+    const isCustom = mediaItem.type === 'custom' || mediaItem.mediaType === 'custom';
+    const isImage = !isCustom && mediaItem.mediaType === 'image';
     const isLive = appState &&
-      ((isImage && appState.mediaMode === 'image' && appState.currentProgramMedia && appState.currentProgramMedia.url === mediaItem.url) ||
-       (!isImage && appState.mediaMode === 'video' && appState.foregroundVideo && appState.foregroundVideo.url === mediaItem.url)) &&
+      ((isCustom && appState.mediaMode === 'custom' && appState.currentCustomSlide && appState.currentCustomSlide.id === mediaItem.id) ||
+       (isImage && appState.mediaMode === 'image' && appState.currentProgramMedia && appState.currentProgramMedia.url === mediaItem.url) ||
+       (!isCustom && !isImage && appState.mediaMode === 'video' && appState.foregroundVideo && appState.foregroundVideo.url === mediaItem.url)) &&
       idx === activeIndex;
 
     card.className = `slide-card space-media-card ${isLive ? 'active' : ''}`;
 
-    const previewHtml = isImage
-      ? `<img src="${mediaItem.url}" class="space-card-preview" alt="${escapeHtml(mediaItem.filename)}">`
-      : `<video src="${mediaItem.url}#t=0.5" class="space-card-preview" muted preload="metadata"></video>`;
+    let previewHtml = '';
+    if (isCustom) {
+      const bgStyle = mediaItem.bgType === 'image'
+        ? `background: url('${mediaItem.bgValue}') center/cover;`
+        : (mediaItem.bgType === 'gradient' || mediaItem.bgType === 'color')
+          ? `background: ${mediaItem.bgValue};`
+          : `background: #0f172a;`;
+      previewHtml = `
+        <div style="width:100%; height:145px; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px; overflow:hidden; ${bgStyle}">
+          ${mediaItem.bgType === 'video' ? `<video src="${mediaItem.bgValue}#t=0.5" muted preload="metadata" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0.65;"></video>` : ''}
+          <div style="position:relative; z-index:2; text-align:${mediaItem.textAlign || 'center'}; font-family:${mediaItem.fontFamily || 'inherit'};">
+            ${mediaItem.title ? `<div style="font-size:0.7rem; font-weight:800; color:${mediaItem.titleColor || '#fde047'}; text-transform:uppercase;">${escapeHtml(mediaItem.title)}</div>` : ''}
+            <div style="font-size:0.86rem; font-weight:800; color:${mediaItem.textColor || '#fff'}; white-space:pre-line; line-height:1.25;">${escapeHtml((mediaItem.text || '').slice(0, 90))}</div>
+          </div>
+        </div>
+      `;
+    } else if (isImage) {
+      previewHtml = `<img src="${mediaItem.url}" class="space-card-preview" alt="${escapeHtml(mediaItem.filename)}">`;
+    } else {
+      previewHtml = `<video src="${mediaItem.url}#t=0.5" class="space-card-preview" muted preload="metadata"></video>`;
+    }
+
+    const badgeLabel = isCustom ? '🎨 EDITABLE' : (isImage ? '🖼️ IMAGEN' : '🎬 VIDEO');
+    const badgeClass = isCustom ? 'tag-puente' : (isImage ? 'tag-verso' : 'tag-pre-coro');
 
     card.innerHTML = `
       ${isLive ? '<span class="live-indicator-badge">EN VIVO</span>' : ''}
       <div class="slide-card-header">
-        <span class="slide-section-tag ${isImage ? 'tag-verso' : 'tag-pre-coro'}">
-          ${isImage ? '🖼️ IMAGEN' : '🎬 VIDEO'}
+        <span class="slide-section-tag ${badgeClass}">
+          ${badgeLabel}
         </span>
         <div style="display:flex; align-items:center; gap:6px;">
+          ${isCustom ? `<button class="btn-item-ctrl btn-edit-space-custom" title="Editar texto, fuente y fondo" style="padding:1px 6px; font-size:0.7rem; color:#f472b6; border-color:#f472b6;">✎ Editar</button>` : ''}
           <span class="slide-num">#${idx + 1}</span>
           <button class="btn-item-ctrl btn-item-danger btn-del-space-item" title="Quitar de este espacio" style="padding:1px 5px; font-size:0.68rem;">✕</button>
         </div>
@@ -1695,16 +2293,24 @@ function renderSpaceCards(space, activeIndex) {
         ${previewHtml}
       </div>
       <div class="space-card-footer">
-        <span class="space-card-filename" title="${escapeHtml(mediaItem.filename || mediaItem.title)}">
-          ${escapeHtml(mediaItem.filename || mediaItem.title)}
+        <span class="space-card-filename" title="${escapeHtml(mediaItem.filename || mediaItem.title || mediaItem.text || '')}">
+          ${escapeHtml(mediaItem.filename || mediaItem.title || (mediaItem.text || '').slice(0, 30))}
         </span>
       </div>
     `;
 
+    const btnEditSpaceCustom = card.querySelector('.btn-edit-space-custom');
+    if (btnEditSpaceCustom) {
+      btnEditSpaceCustom.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openCustomSlideModal(mediaItem, space);
+      });
+    }
+
     card.addEventListener('click', (e) => {
-      if (e.target.closest('.btn-del-space-item')) return;
+      if (e.target.closest('.btn-del-space-item') || e.target.closest('.btn-edit-space-custom')) return;
       socket.emit('go-to-space-slide', { spaceId: space.id, index: idx });
-      showToast(`📽️ Proyectando #${idx + 1}: ${mediaItem.filename || mediaItem.title}`);
+      showToast(`📽️ Proyectando #${idx + 1}: ${mediaItem.filename || mediaItem.title || 'Objeto Editable'}`);
     });
 
     card.querySelector('.btn-del-space-item').addEventListener('click', (e) => {
@@ -1712,7 +2318,7 @@ function renderSpaceCards(space, activeIndex) {
       items.splice(idx, 1);
       saveActivePlaylist();
       socket.emit('select-space', { spaceId: space.id, space });
-      showToast('Archivo quitado del espacio');
+      showToast('Elemento quitado del espacio');
     });
 
     slidesGridContainer.appendChild(card);

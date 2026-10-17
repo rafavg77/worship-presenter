@@ -132,11 +132,20 @@ function applyState(state) {
   }
 
   // 2. Clear Text flag
+  const customSlideContainer = document.getElementById('custom-slide-container');
+  const customSlideBg = document.getElementById('custom-slide-bg');
+  const customSlideOverlay = document.getElementById('custom-slide-overlay');
+  const customSlideContent = document.getElementById('custom-slide-content');
+  const customSlideTitle = document.getElementById('custom-slide-title');
+  const customSlideBody = document.getElementById('custom-slide-body');
+
   if (state.isTextCleared) {
     slideContainer.classList.add('hidden');
     bibleContainer.classList.add('hidden');
+    if (customSlideContent) customSlideContent.classList.add('hidden');
   } else {
     slideContainer.classList.remove('hidden');
+    if (customSlideContent) customSlideContent.classList.remove('hidden');
     if (state.mediaMode === 'bible') {
       bibleContainer.classList.remove('hidden');
     }
@@ -145,12 +154,16 @@ function applyState(state) {
   // 3. Theme & Font Size
   document.body.className = `theme-${state.theme || 'cinematic'} font-size-${state.fontSize || 'medium'}`;
 
-  // 4. Background Video (Loop behind lyrics, bible, and countdown)
-  const shouldPlayBgVideo = ['lyrics', 'bible', 'countdown'].includes(state.mediaMode);
-  if (state.currentVideo && shouldPlayBgVideo) {
-    if (currentBgVideoSrc !== state.currentVideo) {
-      currentBgVideoSrc = state.currentVideo;
-      bgVideo.src = state.currentVideo;
+  // 4. Background Video (Loop behind lyrics, bible, countdown, and custom when bgType === 'video')
+  const cs = state.currentCustomSlide;
+  const isCustomVideoBg = state.mediaMode === 'custom' && cs && cs.bgType === 'video' && cs.bgValue;
+  const activeBgVideoUrl = isCustomVideoBg ? cs.bgValue : state.currentVideo;
+  const shouldPlayBgVideo = ['lyrics', 'bible', 'countdown'].includes(state.mediaMode) || isCustomVideoBg;
+
+  if (activeBgVideoUrl && shouldPlayBgVideo) {
+    if (currentBgVideoSrc !== activeBgVideoUrl) {
+      currentBgVideoSrc = activeBgVideoUrl;
+      bgVideo.src = activeBgVideoUrl;
       bgVideo.load();
       bgVideo.play().catch(e => console.log('Video loop autoplay prevented:', e));
       bgVideo.classList.add('active');
@@ -162,7 +175,7 @@ function applyState(state) {
     } else {
       if (!bgVideo.paused) bgVideo.pause();
     }
-  } else if (!state.currentVideo || !shouldPlayBgVideo) {
+  } else if (!activeBgVideoUrl || !shouldPlayBgVideo) {
     if (currentBgVideoSrc !== '') {
       currentBgVideoSrc = '';
       bgVideo.pause();
@@ -174,6 +187,9 @@ function applyState(state) {
 
   // 5. Media Mode Switcher
   const mode = state.mediaMode || 'lyrics';
+  if (customSlideContainer && mode !== 'custom') {
+    customSlideContainer.classList.add('hidden');
+  }
 
   // --- MODE: VIDEO CON AUDIO (Stand-alone video) ---
   if (mode === 'video' && state.foregroundVideo && state.foregroundVideo.url) {
@@ -210,6 +226,67 @@ function applyState(state) {
     fgVideoContainer.classList.add('hidden');
     audioUnlockBanner.classList.add('hidden');
     if (!fgVideo.paused) fgVideo.pause();
+  }
+
+  // --- MODE: OBJETO EDITABLE / DIAPOSITIVA PERSONALIZADA ---
+  if (mode === 'custom' && cs && customSlideContainer) {
+    hudStatus.innerText = 'DISEÑO EN VIVO';
+    customSlideContainer.classList.remove('hidden');
+    contentLayer.classList.add('hidden');
+    programImageContainer.classList.add('hidden');
+    bibleContainer.classList.add('hidden');
+    countdownContainer.classList.add('hidden');
+
+    // Background styling
+    if (cs.bgType === 'video') {
+      customSlideBg.style.background = 'transparent';
+    } else if (cs.bgType === 'image' && cs.bgValue) {
+      customSlideBg.style.background = `url("${cs.bgValue}") center / cover no-repeat`;
+    } else {
+      customSlideBg.style.background = cs.bgValue || 'radial-gradient(circle at 50% 30%, #1e3a8a 0%, #090d16 70%, #000000 100%)';
+    }
+
+    const overlayAlpha = typeof cs.overlayOpacity === 'number' ? cs.overlayOpacity : 0.35;
+    customSlideOverlay.style.background = `rgba(0, 0, 0, ${overlayAlpha})`;
+
+    // Typography & layout
+    const fontFam = cs.fontFamily || "'Montserrat', sans-serif";
+    const scaleVw = parseFloat(cs.fontSizeVw) || 5.2;
+    const titleSizeVw = Math.max(2.2, scaleVw * 0.68);
+    const color = cs.textColor || '#ffffff';
+    const titleColor = cs.titleColor || '#fde047';
+    const align = cs.textAlign || 'center';
+    const weight = cs.fontWeight || '800';
+    const italic = cs.fontStyle === 'italic' ? 'italic' : 'normal';
+    const transform = cs.uppercase ? 'uppercase' : 'none';
+    const shadow = cs.textShadow === 'none'
+      ? 'none'
+      : '0 3px 15px rgba(0,0,0,0.9), 0 6px 35px rgba(0,0,0,0.85)';
+
+    customSlideContent.style.textAlign = align;
+    customSlideContent.style.fontFamily = fontFam;
+
+    if (cs.title && cs.title.trim()) {
+      customSlideTitle.classList.remove('hidden');
+      customSlideTitle.innerText = cs.title;
+      customSlideTitle.style.fontSize = `${titleSizeVw}vw`;
+      customSlideTitle.style.color = titleColor;
+      customSlideTitle.style.fontWeight = '800';
+      customSlideTitle.style.textTransform = transform;
+      customSlideTitle.style.textShadow = shadow;
+    } else {
+      customSlideTitle.classList.add('hidden');
+      customSlideTitle.innerText = '';
+    }
+
+    customSlideBody.innerText = cs.text || '';
+    customSlideBody.style.fontSize = `${scaleVw}vw`;
+    customSlideBody.style.color = color;
+    customSlideBody.style.fontWeight = weight;
+    customSlideBody.style.fontStyle = italic;
+    customSlideBody.style.textTransform = transform;
+    customSlideBody.style.textShadow = shadow;
+    return;
   }
 
   // --- MODE: IMAGEN DE PROGRAMA (Flyers, Anuncios, Diapositivas) ---
