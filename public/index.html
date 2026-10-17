@@ -70,6 +70,11 @@
         <span>TÚNEL ACTIVO</span>
       </div>
 
+      <div id="midi-status-pill" class="status-pill status-disconnected" style="cursor:pointer;" title="Dispositivos MIDI conectados por WiFi (Playback)">
+        <span>🎹</span>
+        <span id="midi-status-text">MIDI: Buscando...</span>
+      </div>
+
       <div id="display-status-pill" class="status-pill status-disconnected" title="Estado de la pantalla HDMI">
         <span class="status-dot"></span>
         <span id="display-status-text">Proyector: 0</span>
@@ -460,6 +465,20 @@ Jesucristo basta, Jesucristo basta..."></textarea>
             <button class="btn-option theme-opt" data-theme="blue">Azul Alabanza</button>
             <button class="btn-option theme-opt" data-theme="warm">Cálido</button>
           </div>
+        </div>
+
+        <div class="settings-group" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; margin-top: 12px;">
+          <label class="settings-label">🎹 Sincronización Playback (MIDI Wi-Fi):</label>
+          <div id="midi-peers-box" style="font-size: 0.78rem; color: #cbd5e1; background: rgba(15,23,42,0.7); padding: 8px 10px; border-radius: 6px; margin-bottom: 8px;">
+            Buscando iPad / iPhone / Mac en la red...
+          </div>
+          <div id="midi-last-event-box" style="font-size: 0.75rem; color: #38bdf8; background: rgba(15,23,42,0.7); padding: 8px 10px; border-radius: 6px; margin-bottom: 8px; font-family: monospace;">
+            Último comando MIDI: esperando señal de Playback...
+          </div>
+          <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; color:#e2e8f0; cursor:pointer; margin-top:6px;">
+            <input type="checkbox" id="chk-auto-advance-bpm">
+            <span>Auto-avanzar diapositivas por BPM al dar Play</span>
+          </label>
         </div>
 
         <div class="shortcuts-guide">

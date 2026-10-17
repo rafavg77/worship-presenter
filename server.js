@@ -9,6 +9,7 @@ import multer from 'multer';
 import chokidar from 'chokidar';
 import { fileURLToPath } from 'url';
 import { startTunnel } from 'untun';
+import { RtpMidiManager } from './rtp-midi.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -486,7 +487,10 @@ let presenterState = {
   theme: 'cinematic',
   fontSize: 'medium',
   connectedDisplays: 0,
-  connectedOperators: 0
+  connectedOperators: 0,
+  midiConnectedPeers: [],
+  lastMidiEvent: null,
+  autoAdvanceBpm: false
 };
 
 // Initialize with first song
@@ -500,6 +504,206 @@ const bgVids = getBackgroundVideosList();
 if (bgVids.length > 0) {
   presenterState.currentVideo = bgVids[0].url;
 }
+
+// ================================================================
+//  🎹 APPLE NETWORK MIDI (RTP-MIDI) & PLAYBACK AUTOMATION ENGINE
+// ================================================================
+const rtpMidi = new RtpMidiManager({
+  sessionName: 'Worship Presenter',
+  controlPort: 5004,
+  dataPort: 5005
+});
+
+let autoAdvanceTimer = null;
+
+function stopAutoAdvanceTimer() {
+  if (autoAdvanceTimer) {
+    clearInterval(autoAdvanceTimer);
+    autoAdvanceTimer = null;
+  }
+}
+
+function startAutoAdvanceByBpm() {
+  stopAutoAdvanceTimer();
+  if (!presenterState.autoAdvanceBpm || !presenterState.currentSong) return;
+  const bpm = parseFloat(presenterState.currentSong.bpm) || 72;
+  const intervalMs = Math.round((60 / bpm) * 16 * 1000);
+  autoAdvanceTimer = setInterval(() => {
+    if (!presenterState.currentSong || presenterState.mediaMode !== 'lyrics') return;
+    const slides = presenterState.currentSong.slides || [];
+    if (presenterState.currentSlideIndex < slides.length - 1) {
+      presenterState.currentSlideIndex++;
+      presenterState.isTextCleared = false;
+      broadcastState();
+    } else {
+      stopAutoAdvanceTimer();
+    }
+  }, intervalMs);
+}
+
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+function formatMidiNoteName(note) {
+  if (typeof note !== 'number') return '-';
+  const name = NOTE_NAMES[note % 12];
+  const octave = Math.floor(note / 12) - 2;
+  return `${name}${octave} (${note})`;
+}
+
+function resolveSongByIndex(zeroBasedIdx) {
+  const songs = getSongsList();
+  // First check songs in activePlaylist
+  if (presenterState.activePlaylist && Array.isArray(presenterState.activePlaylist.items)) {
+    const playlistSongs = presenterState.activePlaylist.items.filter(i => i.type === 'song');
+    if (playlistSongs[zeroBasedIdx]) {
+      const found = songs.find(s => s.id === playlistSongs[zeroBasedIdx].songId);
+      if (found) return found;
+    }
+  }
+  return songs[zeroBasedIdx] || null;
+}
+
+rtpMidi.on('peers', (peers) => {
+  presenterState.midiConnectedPeers = peers;
+  io.emit('midi-status', {
+    peers,
+    lastMidiEvent: presenterState.lastMidiEvent
+  });
+});
+
+rtpMidi.on('midi', (evt) => {
+  let actionTaken = '';
+
+  if (evt.type === 'start' || evt.type === 'continue') {
+    presenterState.mediaMode = 'lyrics';
+    presenterState.isBlackout = false;
+    presenterState.isTextCleared = false;
+    if (presenterState.currentSlideIndex < 0) {
+      presenterState.currentSlideIndex = 0;
+    }
+    actionTaken = '▶ PLAY (Inicio de Secuencia)';
+    if (presenterState.autoAdvanceBpm) {
+      startAutoAdvanceByBpm();
+    }
+    broadcastState();
+  } else if (evt.type === 'stop') {
+    stopAutoAdvanceTimer();
+    actionTaken = '⏹ STOP (Secuencia Detenida)';
+  } else if (evt.type === 'pc') {
+    const targetSong = resolveSongByIndex(evt.program);
+    if (targetSong) {
+      presenterState.mediaMode = 'lyrics';
+      presenterState.currentSongId = targetSong.id;
+      presenterState.currentSong = targetSong;
+      presenterState.currentSlideIndex = 0;
+      presenterState.isTextCleared = false;
+      actionTaken = `🎵 Canción #${evt.program + 1}: ${targetSong.title}`;
+      broadcastState();
+    }
+  } else if (evt.type === 'noteon') {
+    const { note, velocity } = evt;
+
+    if (note === 0) {
+      presenterState.isBlackout = true;
+      actionTaken = '⬛ Blackout (Nota 0)';
+      broadcastState();
+    } else if (note === 1) {
+      presenterState.isTextCleared = true;
+      actionTaken = '🚫 Limpiar Letra (Nota 1)';
+      broadcastState();
+    } else if (note === 18) {
+      actionTaken = `📂 Seleccionar Repertorio #${velocity} (Nota 18)`;
+    } else if (note === 19) {
+      const songIdx = Math.max(0, velocity - 1);
+      const targetSong = resolveSongByIndex(songIdx);
+      if (targetSong) {
+        presenterState.mediaMode = 'lyrics';
+        presenterState.currentSongId = targetSong.id;
+        presenterState.currentSong = targetSong;
+        presenterState.currentSlideIndex = 0;
+        presenterState.isBlackout = false;
+        presenterState.isTextCleared = false;
+        actionTaken = `🎵 Canción #${velocity}: ${targetSong.title}`;
+        broadcastState();
+      } else {
+        actionTaken = `⚠️ Canción #${velocity} no encontrada (Nota 19)`;
+      }
+    } else if (note === 20) {
+      if (presenterState.currentSong && presenterState.currentSong.slides) {
+        const slides = presenterState.currentSong.slides;
+        const slideIdx = Math.min(Math.max(0, velocity - 1), slides.length - 1);
+        presenterState.mediaMode = 'lyrics';
+        presenterState.currentSlideIndex = slideIdx;
+        presenterState.isBlackout = false;
+        presenterState.isTextCleared = false;
+        const lbl = slides[slideIdx]?.label || `Slide ${slideIdx + 1}`;
+        actionTaken = `⏭️ Diapositiva #${slideIdx + 1} [${lbl}]`;
+        broadcastState();
+      }
+    } else if (note === 21) {
+      if (presenterState.currentSong && presenterState.currentSong.slides) {
+        const slides = presenterState.currentSong.slides;
+        if (presenterState.currentSlideIndex < slides.length - 1) {
+          presenterState.currentSlideIndex++;
+        }
+        presenterState.mediaMode = 'lyrics';
+        presenterState.isBlackout = false;
+        presenterState.isTextCleared = false;
+        actionTaken = `▶ Siguiente Diapositiva (#${presenterState.currentSlideIndex + 1})`;
+        broadcastState();
+      }
+    } else if (note === 22) {
+      if (presenterState.currentSong && presenterState.currentSong.slides) {
+        if (presenterState.currentSlideIndex > 0) {
+          presenterState.currentSlideIndex--;
+        }
+        presenterState.mediaMode = 'lyrics';
+        presenterState.isBlackout = false;
+        presenterState.isTextCleared = false;
+        actionTaken = `◀ Diapositiva Anterior (#${presenterState.currentSlideIndex + 1})`;
+        broadcastState();
+      }
+    } else {
+      if (presenterState.currentSong && presenterState.currentSong.slides) {
+        const slides = presenterState.currentSong.slides;
+        presenterState.mediaMode = 'lyrics';
+        presenterState.isBlackout = false;
+        presenterState.isTextCleared = false;
+
+        if (velocity >= 1 && velocity <= slides.length && velocity < 60) {
+          presenterState.currentSlideIndex = velocity - 1;
+          const lbl = slides[presenterState.currentSlideIndex]?.label || '';
+          actionTaken = `⏭️ Diapositiva #${velocity} [${lbl}] (${formatMidiNoteName(note)})`;
+        } else {
+          if (presenterState.currentSlideIndex < slides.length - 1) {
+            presenterState.currentSlideIndex++;
+          } else {
+            presenterState.currentSlideIndex = 0;
+          }
+          const lbl = slides[presenterState.currentSlideIndex]?.label || '';
+          actionTaken = `▶ Siguiente -> #${presenterState.currentSlideIndex + 1} [${lbl}] (${formatMidiNoteName(note)})`;
+        }
+        broadcastState();
+      }
+    }
+  }
+
+  if (evt.type === 'noteon' || evt.type === 'pc' || evt.type === 'start' || evt.type === 'stop') {
+    const summary = {
+      timestamp: new Date().toLocaleTimeString(),
+      sourceName: evt.sourceName,
+      sourceIp: evt.sourceIp,
+      type: evt.type,
+      channel: evt.channel,
+      note: evt.note,
+      noteName: evt.note !== null ? formatMidiNoteName(evt.note) : evt.type.toUpperCase(),
+      velocity: evt.velocity,
+      actionTaken: actionTaken || 'Recibido'
+    };
+    presenterState.lastMidiEvent = summary;
+    console.log(` 🎹 [MIDI ${summary.sourceName}] Ch:${summary.channel} ${summary.noteName} Vel:${summary.velocity ?? '-'} -> ${summary.actionTaken}`);
+    io.emit('midi-event', summary);
+  }
+});
 
 // Countdown timer interval
 let countdownInterval = null;
@@ -580,8 +784,27 @@ app.get('/api/status', (req, res) => {
     ips: getLocalIpAddresses(),
     port: PORT,
     tunnelUrl,
-    isTunnelStarting
+    isTunnelStarting,
+    midiPeers: rtpMidi.getConnectedPeers()
   });
+});
+
+app.get('/api/midi', (req, res) => {
+  res.json({
+    sessionName: rtpMidi.sessionName,
+    controlPort: rtpMidi.controlPort,
+    dataPort: rtpMidi.dataPort,
+    peers: rtpMidi.getConnectedPeers(),
+    lastMidiEvent: presenterState.lastMidiEvent,
+    autoAdvanceBpm: presenterState.autoAdvanceBpm
+  });
+});
+
+app.post('/api/midi/connect', (req, res) => {
+  const { ip, port, name } = req.body;
+  if (!ip) return res.status(400).json({ error: 'IP requerida' });
+  rtpMidi.ensurePeerInvited(ip.trim(), parseInt(port, 10) || 5004, name || ip.trim());
+  res.json({ success: true, peers: rtpMidi.getConnectedPeers() });
 });
 
 app.get('/api/tunnel', (req, res) => {
@@ -766,7 +989,9 @@ io.on('connection', (socket) => {
     playlists: getPlaylistsList(),
     canonicalBooks: CANONICAL_BOOKS,
     ips: getLocalIpAddresses(),
-    tunnelUrl
+    tunnelUrl,
+    midiPeers: rtpMidi.getConnectedPeers(),
+    lastMidiEvent: presenterState.lastMidiEvent
   });
 
   io.emit('displays-count', {
@@ -954,6 +1179,20 @@ io.on('connection', (socket) => {
     broadcastState();
   });
 
+  socket.on('toggle-auto-advance-bpm', (val) => {
+    presenterState.autoAdvanceBpm = typeof val === 'boolean' ? val : !presenterState.autoAdvanceBpm;
+    if (!presenterState.autoAdvanceBpm) {
+      stopAutoAdvanceTimer();
+    }
+    broadcastState();
+  });
+
+  socket.on('midi-connect-ip', (data) => {
+    if (data && data.ip) {
+      rtpMidi.ensurePeerInvited(data.ip.trim(), parseInt(data.port, 10) || 5004, data.name || data.ip.trim());
+    }
+  });
+
   socket.on('disconnect', () => {
     if (clientType === 'display') {
       presenterState.connectedDisplays = Math.max(0, presenterState.connectedDisplays - 1);
@@ -1009,5 +1248,7 @@ server.listen(PORT, '0.0.0.0', async () => {
   console.log(` 🖼️ Medios Programa:${MEDIA_DIR}`);
   console.log(` 📜 Playlists:      ${PLAYLISTS_DIR}`);
   console.log(` 📖 Biblias:        ${BIBLES_DIR}`);
+  console.log('----------------------------------------------------------------');
+  rtpMidi.start();
   console.log('================================================================\n');
 });

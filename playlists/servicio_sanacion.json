@@ -1,7 +1,7 @@
 {
   "id": "servicio_sanacion",
-  "name": "Servicio Sanación Sin Límites",
-  "createdAt": "2026-10-10",
+  "name": "Servicio Sábado - Sanación Sin Límites",
+  "createdAt": "2026-10-17",
   "items": [
     {
       "id": "item-media-1",
@@ -21,34 +21,34 @@
     {
       "id": "item-song-1",
       "type": "song",
-      "songId": "01-jesucristo-basta",
-      "title": "Jesucristo Basta",
-      "artist": "Un Corazón",
-      "key": "Ab"
+      "songId": "01-glorioso-dia",
+      "title": "Glorioso Día",
+      "artist": "Phil Wickham / Passion",
+      "key": "D"
     },
     {
       "id": "item-song-2",
       "type": "song",
-      "songId": "02-quiero-conocer-a-jesus",
-      "title": "Quiero Conocer A Jesús (Yeshua)",
-      "artist": "Generación 12",
-      "key": "G"
+      "songId": "02-mismo-dios",
+      "title": "Mismo Dios (Same God)",
+      "artist": "Elevation Worship",
+      "key": "C"
     },
     {
       "id": "item-song-3",
       "type": "song",
-      "songId": "03-glorioso-dia",
-      "title": "Glorioso Día",
-      "artist": "Passion feat. Kristian Stanfill",
-      "key": "D"
+      "songId": "03-confio-en-dios",
+      "title": "Confío En Dios",
+      "artist": "Elevation Español",
+      "key": "C"
     },
     {
       "id": "item-song-4",
       "type": "song",
-      "songId": "04-gracias-dios",
-      "title": "Gracias, Dios",
-      "artist": "Essential Worship",
-      "key": "C"
+      "songId": "04-suelto",
+      "title": "Suelto",
+      "artist": "Sarai Rivera",
+      "key": "Ab"
     },
     {
       "id": "item-bible-1",

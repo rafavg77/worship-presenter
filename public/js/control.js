@@ -1412,8 +1412,50 @@ function renderSlideCards(song, activeIndex) {
 }
 
 // ==========================================
-// 10. INITIALIZATION VIA SOCKET
+// 10. INITIALIZATION & MIDI VIA SOCKET
 // ==========================================
+const midiStatusPill = document.getElementById('midi-status-pill');
+const midiStatusText = document.getElementById('midi-status-text');
+const midiPeersBox = document.getElementById('midi-peers-box');
+const midiLastEventBox = document.getElementById('midi-last-event-box');
+const chkAutoAdvanceBpm = document.getElementById('chk-auto-advance-bpm');
+
+if (midiStatusPill) {
+  midiStatusPill.addEventListener('click', () => {
+    const settingsBtn = document.querySelector('.tab-btn[data-tab="settings"]');
+    if (settingsBtn) settingsBtn.click();
+  });
+}
+
+if (chkAutoAdvanceBpm) {
+  chkAutoAdvanceBpm.addEventListener('change', (e) => {
+    socket.emit('toggle-auto-advance-bpm', e.target.checked);
+  });
+}
+
+function updateMidiPeersUI(peers) {
+  const list = peers || [];
+  if (list.length > 0) {
+    const names = list.map(p => p.name).join(', ');
+    if (midiStatusPill) midiStatusPill.className = 'status-pill status-connected';
+    if (midiStatusText) midiStatusText.innerText = `MIDI: ${names}`;
+    if (midiPeersBox) {
+      midiPeersBox.innerHTML = list.map(p => `🟢 <strong>${escapeHtml(p.name)}</strong> (${escapeHtml(p.ip)})`).join('<br>');
+    }
+  } else {
+    if (midiStatusPill) midiStatusPill.className = 'status-pill status-disconnected';
+    if (midiStatusText) midiStatusText.innerText = 'MIDI: Buscando...';
+    if (midiPeersBox) {
+      midiPeersBox.innerHTML = '🟡 Buscando dispositivos Apple MIDI en WiFi...';
+    }
+  }
+}
+
+function updateMidiEventUI(evt) {
+  if (!evt || !midiLastEventBox) return;
+  midiLastEventBox.innerHTML = `[${escapeHtml(evt.timestamp)}] <strong>${escapeHtml(evt.sourceName)}</strong>: ${escapeHtml(evt.noteName)} (Vel: ${evt.velocity ?? '-'})<br>👉 ${escapeHtml(evt.actionTaken)}`;
+}
+
 socket.on('init', (data) => {
   appState = data.state;
   songsList = data.songs || [];
@@ -1427,6 +1469,15 @@ socket.on('init', (data) => {
   if (data.tunnelUrl) {
     updateTunnelUI(data.tunnelUrl);
   }
+  if (data.midiPeers) {
+    updateMidiPeersUI(data.midiPeers);
+  }
+  if (data.lastMidiEvent) {
+    updateMidiEventUI(data.lastMidiEvent);
+  }
+  if (chkAutoAdvanceBpm && appState) {
+    chkAutoAdvanceBpm.checked = !!appState.autoAdvanceBpm;
+  }
 
   renderPlaylistSelector();
   renderPlaylistItems();
@@ -1437,11 +1488,23 @@ socket.on('init', (data) => {
   updateUI(appState);
 });
 
+socket.on('midi-status', (data) => {
+  updateMidiPeersUI(data.peers);
+  if (data.lastMidiEvent) updateMidiEventUI(data.lastMidiEvent);
+});
+
+socket.on('midi-event', (evt) => {
+  updateMidiEventUI(evt);
+});
+
 socket.on('tunnel-status', (data) => {
   updateTunnelUI(data.tunnelUrl);
 });
 
 socket.on('state-changed', (state) => {
+  if (chkAutoAdvanceBpm && state) {
+    chkAutoAdvanceBpm.checked = !!state.autoAdvanceBpm;
+  }
   if (state.activePlaylist) {
     activePlaylist = state.activePlaylist;
     renderPlaylistItems();
