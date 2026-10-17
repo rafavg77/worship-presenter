@@ -1395,7 +1395,7 @@ const shouldStartTunnel = process.argv.includes('--tunnel') ||
 server.listen(PORT, '0.0.0.0', async () => {
   const ips = getLocalIpAddresses();
   console.log('\n================================================================');
-  console.log('   🕊️  SANACIÓN SIN LÍMITES - SISTEMA DE PROYECCIÓN WORSHIP 2.0  ');
+  console.log('   🎹  WORSHIPPRESENTER - SISTEMA DE PROYECCIÓN EN VIVO 2.0      ');
   console.log('================================================================');
   console.log(` 💻 Panel de Control (Laptop):      http://localhost:${PORT}`);
   console.log(` 📽️ Pantalla Proyector (HDMI):      http://localhost:${PORT}/display`);
