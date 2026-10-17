@@ -490,7 +490,8 @@ let presenterState = {
   connectedOperators: 0,
   midiConnectedPeers: [],
   lastMidiEvent: null,
-  autoAdvanceBpm: false
+  autoAdvanceBpm: true,
+  playbackRunning: false
 };
 
 // Initialize with first song
@@ -527,6 +528,7 @@ function startAutoAdvanceByBpm() {
   stopAutoAdvanceTimer();
   if (!presenterState.autoAdvanceBpm || !presenterState.currentSong) return;
   const bpm = parseFloat(presenterState.currentSong.bpm) || 72;
+  // 4 bars (16 beats) per slide
   const intervalMs = Math.round((60 / bpm) * 16 * 1000);
   autoAdvanceTimer = setInterval(() => {
     if (!presenterState.currentSong || presenterState.mediaMode !== 'lyrics') return;
@@ -534,6 +536,7 @@ function startAutoAdvanceByBpm() {
     if (presenterState.currentSlideIndex < slides.length - 1) {
       presenterState.currentSlideIndex++;
       presenterState.isTextCleared = false;
+      console.log(` ⏱️ [Auto-Sync BPM ${bpm}] Avanzando a Diapositiva #${presenterState.currentSlideIndex + 1} (${slides[presenterState.currentSlideIndex]?.label || ''})`);
       broadcastState();
     } else {
       stopAutoAdvanceTimer();
@@ -573,33 +576,63 @@ rtpMidi.on('peers', (peers) => {
 rtpMidi.on('midi', (evt) => {
   let actionTaken = '';
 
-  if (evt.type === 'start' || evt.type === 'continue') {
+  if (evt.type === 'start') {
     presenterState.mediaMode = 'lyrics';
     presenterState.isBlackout = false;
     presenterState.isTextCleared = false;
-    if (presenterState.currentSlideIndex < 0) {
+    presenterState.playbackRunning = true;
+    presenterState.currentSlideIndex = 0;
+    const songTitle = presenterState.currentSong ? presenterState.currentSong.title : '';
+    actionTaken = `▶ PLAY desde Inicio -> ${songTitle} (Slide #1)`;
+    if (presenterState.autoAdvanceBpm) {
+      startAutoAdvanceByBpm();
+    }
+    broadcastState();
+  } else if (evt.type === 'continue') {
+    presenterState.mediaMode = 'lyrics';
+    presenterState.isBlackout = false;
+    presenterState.isTextCleared = false;
+    presenterState.playbackRunning = true;
+    const slides = presenterState.currentSong?.slides || [];
+    if (presenterState.currentSlideIndex < 0 || presenterState.currentSlideIndex >= slides.length - 1) {
       presenterState.currentSlideIndex = 0;
     }
-    actionTaken = '▶ PLAY (Inicio de Secuencia)';
+    actionTaken = `▶ CONTINUE (Slide #${presenterState.currentSlideIndex + 1})`;
     if (presenterState.autoAdvanceBpm) {
       startAutoAdvanceByBpm();
     }
     broadcastState();
   } else if (evt.type === 'stop') {
+    presenterState.playbackRunning = false;
     stopAutoAdvanceTimer();
-    actionTaken = '⏹ STOP (Secuencia Detenida)';
-  } else if (evt.type === 'pc') {
-    const targetSong = resolveSongByIndex(evt.program);
+    actionTaken = '⏹ STOP (Secuencia en Pausa)';
+    broadcastState();
+  } else if (evt.type === 'spp') {
+    if (presenterState.currentSong && presenterState.currentSong.slides) {
+      const slides = presenterState.currentSong.slides;
+      const targetSlide = evt.velocity === 0 ? 0 : Math.min(Math.floor(evt.velocity / 64), slides.length - 1);
+      presenterState.mediaMode = 'lyrics';
+      presenterState.currentSlideIndex = targetSlide;
+      presenterState.isBlackout = false;
+      presenterState.isTextCleared = false;
+      actionTaken = `⏩ Posición de Secuencia -> Slide #${targetSlide + 1}`;
+      broadcastState();
+    }
+  } else if (evt.type === 'songselect' || evt.type === 'pc') {
+    const idx = evt.type === 'pc' ? evt.program : evt.velocity;
+    const targetSong = resolveSongByIndex(idx);
     if (targetSong) {
       presenterState.mediaMode = 'lyrics';
       presenterState.currentSongId = targetSong.id;
       presenterState.currentSong = targetSong;
       presenterState.currentSlideIndex = 0;
       presenterState.isTextCleared = false;
-      actionTaken = `🎵 Canción #${evt.program + 1}: ${targetSong.title}`;
+      actionTaken = `🎵 Canción #${idx + 1}: ${targetSong.title}`;
       broadcastState();
     }
   } else if (evt.type === 'noteon') {
+    // Explicit MIDI note cue received -> stop fallback timer so explicit cues drive slides
+    stopAutoAdvanceTimer();
     const { note, velocity } = evt;
 
     if (note === 0) {
@@ -687,7 +720,7 @@ rtpMidi.on('midi', (evt) => {
     }
   }
 
-  if (evt.type === 'noteon' || evt.type === 'pc' || evt.type === 'start' || evt.type === 'stop') {
+  if (['noteon', 'pc', 'start', 'continue', 'stop', 'spp', 'songselect'].includes(evt.type)) {
     const summary = {
       timestamp: new Date().toLocaleTimeString(),
       sourceName: evt.sourceName,

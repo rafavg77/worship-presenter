@@ -452,6 +452,29 @@ export class RtpMidiManager extends EventEmitter {
         continue;
       }
 
+      // System Common (0xF1..0xF6)
+      if (status === 0xf2) {
+        // Song Position Pointer (2 data bytes: LSB, MSB in 16th-note beats)
+        if (offset + 2 >= cmdEnd) break;
+        const lsb = rtpPacket[offset + 1];
+        const msb = rtpPacket[offset + 2];
+        offset += 3;
+        this.emitMidiMessage([0xf2, lsb, msb], sourceIp, sourceName);
+        continue;
+      }
+      if (status === 0xf1 || status === 0xf3) {
+        // MTC Quarter Frame (0xF1) or Song Select (0xF3) -> 1 data byte
+        if (offset + 1 >= cmdEnd) break;
+        const d1 = rtpPacket[offset + 1];
+        offset += 2;
+        this.emitMidiMessage([status, d1], sourceIp, sourceName);
+        continue;
+      }
+      if (status === 0xf6) {
+        offset += 1;
+        continue;
+      }
+
       // SysEx (0xF0..0xF7)
       if (status === 0xf0 || status === 0xf7) {
         offset += 1;
@@ -491,8 +514,9 @@ export class RtpMidiManager extends EventEmitter {
   emitMidiMessage(bytes, sourceIp, sourceName) {
     const status = bytes[0];
     if (status >= 0xf8) {
-      // Ignore continuous 0xF8 timing clock spam unless Start/Stop/Continue
-      if (status === 0xfa || status === 0xfb || status === 0xfc) {
+      if (status === 0xf8) {
+        this.emit('clock', { sourceIp, sourceName, timestamp: Date.now() });
+      } else if (status === 0xfa || status === 0xfb || status === 0xfc) {
         this.emit('midi', {
           type: status === 0xfa ? 'start' : status === 0xfb ? 'continue' : 'stop',
           channel: 0,
@@ -503,6 +527,33 @@ export class RtpMidiManager extends EventEmitter {
           sourceName
         });
       }
+      return;
+    }
+
+    if (status === 0xf2) {
+      const spp = ((bytes[2] & 0x7f) << 7) | (bytes[1] & 0x7f);
+      this.emit('midi', {
+        type: 'spp',
+        channel: 0,
+        note: null,
+        velocity: spp, // 16th-note beats from start
+        raw: bytes,
+        sourceIp,
+        sourceName
+      });
+      return;
+    }
+
+    if (status === 0xf3) {
+      this.emit('midi', {
+        type: 'songselect',
+        channel: 0,
+        note: bytes[1] & 0x7f,
+        velocity: bytes[1] & 0x7f,
+        raw: bytes,
+        sourceIp,
+        sourceName
+      });
       return;
     }
 
