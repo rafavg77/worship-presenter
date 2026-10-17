@@ -228,6 +228,16 @@ Object.keys(tabs).forEach(k => {
   }
 });
 
+// macOS Sidebar Toggle (Apple HIG sidebars.md)
+const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+const sidebarEl = document.querySelector('.sidebar');
+if (btnToggleSidebar && sidebarEl) {
+  btnToggleSidebar.addEventListener('click', () => {
+    sidebarEl.classList.toggle('sidebar-collapsed');
+    btnToggleSidebar.classList.toggle('active', !sidebarEl.classList.contains('sidebar-collapsed'));
+  });
+}
+
 // Launch Projector Display Window
 btnOpenDisplay.addEventListener('click', () => {
   window.open('/display', 'WorshipDisplay', 'width=1280,height=720,menubar=no,toolbar=no,location=no');
@@ -1965,18 +1975,18 @@ function updateUI(state) {
   // 1. Blackout & Clear buttons
   if (state.isBlackout) {
     btnBlackout.classList.add('active');
-    btnBlackout.innerHTML = '<span class="btn-icon">⬛</span> <span>EN BLACKOUT</span>';
+    btnBlackout.innerHTML = '<span class="btn-icon">⬛</span> <span>En Blackout</span>';
   } else {
     btnBlackout.classList.remove('active');
-    btnBlackout.innerHTML = '<span class="btn-icon">⬛</span> <span>BLACKOUT</span>';
+    btnBlackout.innerHTML = '<span class="btn-icon">⬛</span> <span>Blackout</span>';
   }
 
   if (state.isTextCleared) {
     btnClearText.classList.add('active');
-    btnClearText.innerHTML = '<span class="btn-icon">🚫</span> <span>TEXTO OCULTO</span>';
+    btnClearText.innerHTML = '<span class="btn-icon">🚫</span> <span>Texto Oculto</span>';
   } else {
     btnClearText.classList.remove('active');
-    btnClearText.innerHTML = '<span class="btn-icon">🚫</span> <span>LIMPIAR TEXTO</span>';
+    btnClearText.innerHTML = '<span class="btn-icon">🚫</span> <span>Limpiar Texto</span>';
   }
 
   // 2. Status Pills
@@ -2178,7 +2188,7 @@ function renderSpaceCards(space, activeIndex) {
         <h4>Arrastra y suelta aquí tus Imágenes o Videos para "${escapeHtml(space.title)}"</h4>
         <p>Soporta múltiples fotos (.jpg, .png, .webp) y videos (.mp4, .mov, .webm) • O haz clic para elegir archivos</p>
       </div>
-      <button type="button" id="btn-space-add-custom" class="action-btn btn-sm" style="background:linear-gradient(135deg,#ec4899,#8b5cf6); color:#fff; border:none; padding:10px 14px; font-weight:800; flex-shrink:0;">
+      <button type="button" id="btn-space-add-custom" class="action-btn btn-primary" style="padding:8px 14px; flex-shrink:0;">
         🎨 + Crear Diapositiva Editable Aquí
       </button>
       <input type="file" id="space-file-input" multiple accept="image/*,video/mp4,video/webm,video/quicktime" style="display:none">
