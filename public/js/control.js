@@ -375,14 +375,44 @@ socket.on('video-time-update', (data) => {
 });
 
 // ==========================================
-// 1. PLAYLIST MANAGEMENT
+// 1. REPERTORIO & ESPACIOS MULTIMEDIA
 // ==========================================
+const btnRepertorioAddSong = document.getElementById('btn-repertorio-add-song');
+const btnRepertorioAddSpace = document.getElementById('btn-repertorio-add-space');
+const newSpaceModal = document.getElementById('new-space-modal');
+const btnCloseSpaceModal = document.getElementById('btn-close-space-modal');
+const inputSpaceTitle = document.getElementById('input-space-title');
+const btnSaveNewSpace = document.getElementById('btn-save-new-space');
+const chkAddSongToRepertorio = document.getElementById('chk-add-song-to-repertorio');
+const lblActiveRepertorioSong = document.getElementById('lbl-active-repertorio-song');
+
+// Helper to upload a single File object and return its media descriptor
+async function uploadFileAndReturnMedia(file, target = 'media') {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`/api/upload?target=${encodeURIComponent(target)}`, {
+    method: 'POST',
+    body: formData
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Error al subir archivo');
+  const ext = (data.file || file.name).split('.').pop().toLowerCase();
+  const isVideo = ['mp4', 'webm', 'mov', 'mkv', 'm4v'].includes(ext);
+  return {
+    id: `media_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    title: data.title || data.file,
+    filename: data.file,
+    url: data.url || `/media-store/${encodeURIComponent(data.file)}`,
+    mediaType: data.mediaType || (isVideo ? 'video' : 'image')
+  };
+}
+
 function renderPlaylistSelector() {
   playlistSelect.innerHTML = '';
   if (!playlistsList || playlistsList.length === 0) {
     const opt = document.createElement('option');
-    opt.value = 'default_playlist';
-    opt.innerText = 'Lista de Servicio';
+    opt.value = '17_10_2026';
+    opt.innerText = '17/10/2026';
     playlistSelect.appendChild(opt);
     return;
   }
@@ -396,6 +426,10 @@ function renderPlaylistSelector() {
     }
     playlistSelect.appendChild(opt);
   });
+
+  if (lblActiveRepertorioSong && activePlaylist) {
+    lblActiveRepertorioSong.innerText = activePlaylist.name;
+  }
 }
 
 playlistSelect.addEventListener('change', async () => {
@@ -409,8 +443,9 @@ playlistSelect.addEventListener('change', async () => {
     const data = await res.json();
     if (data.playlist) {
       activePlaylist = data.playlist;
+      if (lblActiveRepertorioSong) lblActiveRepertorioSong.innerText = activePlaylist.name;
       renderPlaylistItems();
-      showToast(`Playlist activada: ${data.playlist.name}`);
+      showToast(`🎵 Repertorio activo: ${data.playlist.name}`);
     }
   } catch (err) {
     console.error(err);
@@ -420,12 +455,13 @@ playlistSelect.addEventListener('change', async () => {
 btnNewPlaylist.addEventListener('click', () => {
   inputPlaylistName.value = '';
   newPlaylistModal.classList.remove('hidden');
+  setTimeout(() => inputPlaylistName.focus(), 50);
 });
 btnClosePlaylistModal.addEventListener('click', () => newPlaylistModal.classList.add('hidden'));
 
 btnSaveNewPlaylist.addEventListener('click', async () => {
   const name = inputPlaylistName.value.trim();
-  if (!name) return alert('Introduce un nombre para la playlist');
+  if (!name) return alert('Introduce un título o fecha para el repertorio (ej. 17/10/2026)');
 
   try {
     const res = await fetch('/api/playlists', {
@@ -442,12 +478,66 @@ btnSaveNewPlaylist.addEventListener('click', async () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: data.playlist.id })
       });
-      showToast(`Playlist creada: ${name}`);
+      if (lblActiveRepertorioSong) lblActiveRepertorioSong.innerText = activePlaylist.name;
+      showToast(`✨ Repertorio creado: ${name}`);
     }
   } catch (err) {
-    alert('Error al crear playlist: ' + err.message);
+    alert('Error al crear repertorio: ' + err.message);
   }
 });
+
+// Quick buttons inside Repertorio tab
+if (btnRepertorioAddSong) {
+  btnRepertorioAddSong.addEventListener('click', () => {
+    inputSongTitle.value = '';
+    inputSongArtist.value = '';
+    inputSongKey.value = '';
+    inputSongBpm.value = '';
+    inputSongContent.value = `[Verso 1]\n\n\n[Coro]\n\n\n[Puente]\n\n`;
+    if (chkAddSongToRepertorio) chkAddSongToRepertorio.checked = true;
+    if (lblActiveRepertorioSong && activePlaylist) lblActiveRepertorioSong.innerText = activePlaylist.name;
+    newSongModal.classList.remove('hidden');
+    setTimeout(() => inputSongTitle.focus(), 50);
+  });
+}
+
+if (btnRepertorioAddSpace) {
+  btnRepertorioAddSpace.addEventListener('click', () => {
+    if (inputSpaceTitle) inputSpaceTitle.value = '';
+    if (newSpaceModal) {
+      newSpaceModal.classList.remove('hidden');
+      setTimeout(() => inputSpaceTitle && inputSpaceTitle.focus(), 50);
+    }
+  });
+}
+
+if (btnCloseSpaceModal) {
+  btnCloseSpaceModal.addEventListener('click', () => newSpaceModal.classList.add('hidden'));
+}
+
+if (btnSaveNewSpace) {
+  btnSaveNewSpace.addEventListener('click', () => {
+    const title = (inputSpaceTitle.value || '').trim();
+    if (!title) return alert('Escribe un nombre para este espacio (ej. Bienvenida, Anuncios, Predicación)');
+
+    const newSpace = {
+      id: `space_${Date.now()}`,
+      type: 'space',
+      title,
+      items: []
+    };
+
+    if (!activePlaylist) {
+      activePlaylist = { id: '17_10_2026', name: '17/10/2026', items: [] };
+    }
+    if (!Array.isArray(activePlaylist.items)) activePlaylist.items = [];
+    activePlaylist.items.push(newSpace);
+    saveActivePlaylist();
+    newSpaceModal.classList.add('hidden');
+    socket.emit('select-space', { spaceId: newSpace.id, space: newSpace });
+    showToast(`🗂️ Espacio creado: "${title}". ¡Ahora arrastra fotos o videos al centro!`);
+  });
+}
 
 function renderPlaylistItems() {
   playlistItemsList.innerHTML = '';
@@ -457,7 +547,7 @@ function renderPlaylistItems() {
   if (items.length === 0) {
     playlistItemsList.innerHTML = `
       <div style="color:#64748b; padding:16px; font-size:0.8rem; text-align:center;">
-        Esta playlist está vacía.<br>Agrega canciones, medios, versículos o contadores desde las pestañas laterales.
+        Este repertorio está vacío.<br>Usa los botones <strong>➕ Canción</strong> o <strong>🗂️ + Espacio (Fotos/Video)</strong> arriba para armar tu servicio.
       </div>
     `;
     return;
@@ -465,7 +555,9 @@ function renderPlaylistItems() {
 
   items.forEach((item, idx) => {
     const card = document.createElement('div');
-    card.className = 'playlist-item-card';
+    const isActiveSong = item.type === 'song' && appState && appState.workspaceMode !== 'space' && appState.currentSongId === item.songId;
+    const isActiveSpace = item.type === 'space' && appState && appState.workspaceMode === 'space' && appState.currentSpaceId === item.id;
+    card.className = `playlist-item-card ${(isActiveSong || isActiveSpace) ? 'active' : ''}`;
 
     let icon = '📄';
     let title = item.title || item.reference || item.filename || 'Elemento';
@@ -477,6 +569,10 @@ function renderPlaylistItems() {
     if (item.type === 'song') {
       icon = '🎵';
       sub = item.artist ? `Canción • ${item.artist}` : 'Canción';
+    } else if (item.type === 'space') {
+      icon = '🗂️';
+      const count = Array.isArray(item.items) ? item.items.length : 0;
+      sub = `Espacio Multimedia • ${count} archivo${count === 1 ? '' : 's'} (arrastra fotos/videos)`;
     } else if (isImage) {
       icon = '🖼️';
       sub = 'Foto / Flyer de Servicio';
@@ -507,7 +603,29 @@ function renderPlaylistItems() {
       </div>
     `;
 
-    // Click card to go live / project
+    // Allow dropping files directly onto a Space card in the sidebar too!
+    if (item.type === 'space') {
+      card.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        card.style.borderColor = '#38bdf8';
+        card.style.background = 'rgba(56, 189, 248, 0.18)';
+      });
+      card.addEventListener('dragleave', () => {
+        card.style.borderColor = '';
+        card.style.background = '';
+      });
+      card.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        card.style.borderColor = '';
+        card.style.background = '';
+        const files = Array.from(e.dataTransfer.files || []);
+        if (files.length > 0) {
+          await handleFilesDroppedIntoSpace(item, files);
+        }
+      });
+    }
+
+    // Click card to open / project
     card.addEventListener('click', (e) => {
       if (e.target.closest('.playlist-item-actions')) return;
       launchPlaylistItem(item);
@@ -540,11 +658,32 @@ function renderPlaylistItems() {
       e.stopPropagation();
       items.splice(idx, 1);
       saveActivePlaylist();
-      showToast('Elemento removido de la playlist');
+      showToast('Elemento removido del repertorio');
     });
 
     playlistItemsList.appendChild(card);
   });
+}
+
+async function handleFilesDroppedIntoSpace(space, files) {
+  if (!space || !files || files.length === 0) return;
+  if (!Array.isArray(space.items)) space.items = [];
+  showToast(`⏳ Subiendo ${files.length} archivo(s) a "${space.title}"...`);
+  let addedCount = 0;
+  for (const file of files) {
+    try {
+      const uploaded = await uploadFileAndReturnMedia(file, 'media');
+      space.items.push(uploaded);
+      addedCount++;
+    } catch (err) {
+      console.error('Error subiendo archivo al espacio:', err);
+    }
+  }
+  if (addedCount > 0) {
+    saveActivePlaylist();
+    socket.emit('select-space', { spaceId: space.id, space });
+    showToast(`✅ ${addedCount} archivo(s) agregados a "${space.title}"`);
+  }
 }
 
 function launchPlaylistItem(item) {
@@ -553,13 +692,16 @@ function launchPlaylistItem(item) {
 
   if (item.type === 'song') {
     socket.emit('select-song', { songId: item.songId, slideIndex: 0 });
-    showToast(`Proyectando canción: ${item.title}`);
+    showToast(`🎵 Canción activa: ${item.title}`);
+  } else if (item.type === 'space') {
+    socket.emit('select-space', { spaceId: item.id, space: item });
+    showToast(`🗂️ Espacio abierto: ${item.title}`);
   } else if (isImage) {
     socket.emit('project-media', { url: item.url, filename: item.filename || item.title, mediaType: 'image' });
-    showToast(`Proyectando imagen: ${item.filename || item.title}`);
+    showToast(`🖼️ Proyectando imagen: ${item.filename || item.title}`);
   } else if (isVideo) {
     socket.emit('project-media', { url: item.url, filename: item.filename || item.title, mediaType: 'video' });
-    showToast(`Proyectando video con audio: ${item.filename || item.title}`);
+    showToast(`🎬 Proyectando video con audio: ${item.filename || item.title}`);
   } else if (item.type === 'bible') {
     socket.emit('project-bible', {
       reference: item.reference || item.title,
@@ -567,7 +709,7 @@ function launchPlaylistItem(item) {
       version: item.version || 'RVR1960',
       text: item.text
     });
-    showToast(`Proyectando: ${item.displayRef || item.reference || item.title}`);
+    showToast(`📖 Proyectando: ${item.displayRef || item.reference || item.title}`);
   } else if (item.type === 'countdown') {
     const total = item.totalSeconds || item.duration || 300;
     const title = item.title || item.header || 'EL SERVICIO COMIENZA EN';
@@ -577,18 +719,18 @@ function launchPlaylistItem(item) {
       endMessage: item.endMessage || '¡BIENVENIDOS!'
     });
     socket.emit('countdown-project', true);
-    showToast('Proyectando cuenta regresiva');
+    showToast('⏱️ Proyectando cuenta regresiva');
   }
 }
 
 function addItemToActivePlaylist(item) {
   if (!activePlaylist) {
-    activePlaylist = { id: 'default_playlist', name: 'Lista de Servicio', items: [] };
+    activePlaylist = { id: '17_10_2026', name: '17/10/2026', items: [] };
   }
   if (!Array.isArray(activePlaylist.items)) activePlaylist.items = [];
   activePlaylist.items.push(item);
   saveActivePlaylist();
-  showToast(`➕ Añadido al playlist: ${item.title || item.displayRef || item.filename || 'Elemento'}`);
+  showToast(`➕ Añadido a Repertorio (${activePlaylist.name}): ${item.title || item.displayRef || item.filename || 'Elemento'}`);
 }
 
 function saveActivePlaylist() {
@@ -616,7 +758,7 @@ function renderSongsList(songs) {
 
   filtered.forEach(song => {
     const item = document.createElement('div');
-    const isCurrent = appState && appState.mediaMode === 'lyrics' && appState.currentSongId === song.id;
+    const isCurrent = appState && appState.workspaceMode !== 'space' && appState.mediaMode === 'lyrics' && appState.currentSongId === song.id;
     item.className = `song-item ${isCurrent ? 'active' : ''}`;
     item.dataset.id = song.id;
 
@@ -626,8 +768,8 @@ function renderSongsList(songs) {
           <div class="song-item-title">${escapeHtml(song.title)}</div>
           <div class="song-item-artist">${escapeHtml(song.artist || 'Sin artista')}</div>
         </div>
-        <button class="action-btn btn-sm btn-ghost btn-add-pl" title="Agregar a Playlist" style="padding:4px 8px; font-size:0.72rem; margin-left:6px;">
-          ➕ Playlist
+        <button class="action-btn btn-sm btn-ghost btn-add-pl" title="Agregar al Repertorio activo" style="padding:4px 8px; font-size:0.72rem; margin-left:6px;">
+          ➕ Repertorio
         </button>
       </div>
       <div class="song-item-badges">
@@ -666,6 +808,8 @@ btnAddSong.addEventListener('click', () => {
   inputSongKey.value = '';
   inputSongBpm.value = '';
   inputSongContent.value = `[Verso 1]\n\n\n[Coro]\n\n\n[Puente]\n\n`;
+  if (chkAddSongToRepertorio) chkAddSongToRepertorio.checked = true;
+  if (lblActiveRepertorioSong && activePlaylist) lblActiveRepertorioSong.innerText = activePlaylist.name;
   newSongModal.classList.remove('hidden');
 });
 btnCloseSongModal.addEventListener('click', () => newSongModal.classList.add('hidden'));
@@ -704,8 +848,16 @@ btnSaveSong.addEventListener('click', async () => {
     const data = await res.json();
     if (data.success) {
       newSongModal.classList.add('hidden');
+      if (!chkAddSongToRepertorio || chkAddSongToRepertorio.checked) {
+        addItemToActivePlaylist({
+          type: 'song',
+          songId: data.song.id,
+          title: data.song.title,
+          artist: data.song.artist
+        });
+      }
       socket.emit('select-song', { songId: data.song.id, slideIndex: 0 });
-      showToast(`Canción guardada: ${title}`);
+      showToast(`✅ Canción guardada: ${title}`);
     }
   } catch (err) {
     alert('Error al guardar la canción: ' + err.message);
@@ -735,7 +887,7 @@ function renderMediaList() {
   if (items.length === 0) {
     mediaListContainer.innerHTML = `
       <div style="color:#64748b; padding:16px; font-size:0.8rem; text-align:center;">
-        No hay fotos o videos subidos.<br>Sube imágenes (.jpg/.png) o videos (.mp4) abajo.
+        No hay fotos o videos en esta categoría.<br>Arrastra o sube imágenes (.jpg/.png) o videos (.mp4) abajo.
       </div>
     `;
     return;
@@ -748,19 +900,19 @@ function renderMediaList() {
     const isImage = m.mediaType === 'image';
     const thumbHtml = isImage
       ? `<img src="${m.url}" class="media-thumb" alt="Miniatura">`
-      : `<div class="media-thumb">🎬</div>`;
+      : `<video src="${m.url}#t=0.5" class="media-thumb" muted preload="metadata"></video>`;
 
     card.innerHTML = `
       ${thumbHtml}
       <div class="media-card-info">
         <div class="media-title" title="${escapeHtml(m.filename)}">${escapeHtml(m.filename)}</div>
-        <span class="media-type-tag ${isImage ? 'tag-image' : 'tag-video'}">${isImage ? '🖼️ FOTO / FLYER' : '🎬 VIDEO CON AUDIO'}</span>
+        <span class="media-type-tag ${isImage ? 'tag-image' : 'tag-video'}">${isImage ? '🖼️ FOTO / FLYER' : '🎬 VIDEO MP4'}</span>
       </div>
       <div class="media-card-btns">
         <button class="action-btn btn-sm btn-primary btn-proj-media" title="Proyectar ahora en pantalla">
           📽️ Proyectar
         </button>
-        <button class="action-btn btn-sm btn-ghost btn-add-media-pl" title="Añadir a Playlist">
+        <button class="action-btn btn-sm btn-ghost btn-add-media-pl" title="Añadir al Espacio abierto o al Repertorio">
           ➕
         </button>
       </div>
@@ -776,12 +928,30 @@ function renderMediaList() {
       showToast(`Proyectando ${isImage ? 'imagen' : 'video'}: ${m.filename}`);
     });
 
-    // Add to playlist
+    // Add to active Space (if open) or Repertorio
     card.querySelector('.btn-add-media-pl').addEventListener('click', () => {
+      if (appState && appState.workspaceMode === 'space' && appState.currentSpaceId && activePlaylist && Array.isArray(activePlaylist.items)) {
+        const targetSpace = activePlaylist.items.find(it => it.type === 'space' && it.id === appState.currentSpaceId);
+        if (targetSpace) {
+          if (!Array.isArray(targetSpace.items)) targetSpace.items = [];
+          targetSpace.items.push({
+            id: `media_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            title: m.title || m.filename,
+            filename: m.filename,
+            url: m.url,
+            mediaType: m.mediaType
+          });
+          saveActivePlaylist();
+          socket.emit('select-space', { spaceId: targetSpace.id, space: targetSpace });
+          showToast(`➕ Añadido al espacio "${targetSpace.title}": ${m.filename}`);
+          return;
+        }
+      }
       addItemToActivePlaylist({
         type: isImage ? 'image' : 'video',
         url: m.url,
-        filename: m.filename
+        filename: m.filename,
+        mediaType: m.mediaType
       });
     });
 
@@ -790,25 +960,43 @@ function renderMediaList() {
 }
 
 inputMediaUpload.addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+  const files = Array.from(e.target.files || []);
+  if (files.length === 0) return;
 
-  const formData = new FormData();
-  formData.append('file', file);
-
-  try {
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData
-    });
-    const data = await res.json();
-    if (data.success) {
-      showToast(`Medio subido: ${data.file}`);
+  for (const file of files) {
+    try {
+      const uploaded = await uploadFileAndReturnMedia(file, 'media');
+      showToast(`✅ Medio subido: ${uploaded.filename}`);
+    } catch (err) {
+      alert('Error al subir medio: ' + err.message);
     }
-  } catch (err) {
-    alert('Error al subir medio: ' + err.message);
   }
+  inputMediaUpload.value = '';
 });
+
+const mediaUploadDropzone = document.getElementById('media-upload-dropzone');
+if (mediaUploadDropzone) {
+  mediaUploadDropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    mediaUploadDropzone.style.background = 'rgba(56, 189, 248, 0.15)';
+  });
+  mediaUploadDropzone.addEventListener('dragleave', () => {
+    mediaUploadDropzone.style.background = '';
+  });
+  mediaUploadDropzone.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    mediaUploadDropzone.style.background = '';
+    const files = Array.from(e.dataTransfer.files || []);
+    for (const file of files) {
+      try {
+        const uploaded = await uploadFileAndReturnMedia(file, 'media');
+        showToast(`✅ Medio subido: ${uploaded.filename}`);
+      } catch (err) {
+        alert('Error al subir medio: ' + err.message);
+      }
+    }
+  });
+}
 
 // ==========================================
 // 4. BIBLE READER
@@ -1082,12 +1270,12 @@ socket.on('countdown-ended', () => {
 });
 
 // ==========================================
-// 6. BACKGROUND VIDEOS (LOOP PARA LETRAS)
+// 6. VIDEOS & BACKGROUND LOOPS
 // ==========================================
 function renderVideosList(videos) {
   videosListContainer.innerHTML = '';
   if (!videos || videos.length === 0) {
-    videosListContainer.innerHTML = '<div style="color:#64748b; padding:12px; font-size:0.8rem">No hay fondos en ./videos. Sube uno abajo.</div>';
+    videosListContainer.innerHTML = '<div style="color:#64748b; padding:12px; font-size:0.8rem">No hay videos subidos. Sube uno abajo.</div>';
     return;
   }
 
@@ -1097,19 +1285,63 @@ function renderVideosList(videos) {
     item.dataset.url = v.url;
 
     item.innerHTML = `
-      <div class="video-card-title" title="${escapeHtml(v.filename)}">
-        <span>🎬</span> <span>${escapeHtml(v.filename)}</span>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <video src="${v.url}#t=0.5" class="media-thumb" muted preload="metadata" style="width:54px; height:40px; border-radius:6px; object-fit:cover;"></video>
+        <div class="video-card-title" title="${escapeHtml(v.filename)}" style="flex:1;">
+          <span>${escapeHtml(v.filename)}</span>
+        </div>
       </div>
-      <div class="video-card-actions">
-        <button class="btn-video-bg" title="Poner de fondo en bucle para canciones">
-          🖼️ Seleccionar Fondo
+      <div class="video-card-actions" style="margin-top:4px;">
+        <button class="btn-video-audio" title="Proyectar video en pantalla con audio">
+          ▶ Con Audio
+        </button>
+        <button class="btn-video-bg" title="Poner de fondo silencioso en bucle detrás de letras">
+          🖼️ Fondo Loop
+        </button>
+        <button class="action-btn btn-sm btn-ghost btn-video-add-pl" title="Añadir al Espacio abierto o al Repertorio" style="padding:4px 8px;">
+          ➕
         </button>
       </div>
     `;
 
+    item.querySelector('.btn-video-audio').addEventListener('click', () => {
+      socket.emit('project-media', {
+        url: v.url,
+        filename: v.filename,
+        mediaType: 'video'
+      });
+      showToast(`🎬 Proyectando video con audio: ${v.filename}`);
+    });
+
     item.querySelector('.btn-video-bg').addEventListener('click', () => {
       socket.emit('select-video', { url: v.url });
-      showToast(`Fondo de alabanza activo: ${v.filename}`);
+      showToast(`🖼️ Fondo en bucle activo: ${v.filename}`);
+    });
+
+    item.querySelector('.btn-video-add-pl').addEventListener('click', () => {
+      if (appState && appState.workspaceMode === 'space' && appState.currentSpaceId && activePlaylist && Array.isArray(activePlaylist.items)) {
+        const targetSpace = activePlaylist.items.find(it => it.type === 'space' && it.id === appState.currentSpaceId);
+        if (targetSpace) {
+          if (!Array.isArray(targetSpace.items)) targetSpace.items = [];
+          targetSpace.items.push({
+            id: `media_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            title: v.title || v.filename,
+            filename: v.filename,
+            url: v.url,
+            mediaType: 'video'
+          });
+          saveActivePlaylist();
+          socket.emit('select-space', { spaceId: targetSpace.id, space: targetSpace });
+          showToast(`➕ Video añadido al espacio "${targetSpace.title}"`);
+          return;
+        }
+      }
+      addItemToActivePlaylist({
+        type: 'video',
+        url: v.url,
+        filename: v.filename,
+        mediaType: 'video'
+      });
     });
 
     videosListContainer.appendChild(item);
@@ -1122,24 +1354,18 @@ btnClearVideo.addEventListener('click', () => {
 });
 
 inputFileUpload.addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+  const files = Array.from(e.target.files || []);
+  if (files.length === 0) return;
 
-  const formData = new FormData();
-  formData.append('file', file);
-
-  try {
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData
-    });
-    const data = await res.json();
-    if (data.success) {
-      showToast(`Fondo en bucle subido: ${data.file}`);
+  for (const file of files) {
+    try {
+      const uploaded = await uploadFileAndReturnMedia(file, 'video_bg');
+      showToast(`🎬 Video subido: ${uploaded.filename}`);
+    } catch (err) {
+      alert('Error al subir video: ' + err.message);
     }
-  } catch (err) {
-    alert('Error al subir video: ' + err.message);
   }
+  inputFileUpload.value = '';
 });
 
 // ==========================================
@@ -1214,14 +1440,19 @@ function updateUI(state) {
 
   // 3. Center Workspace Decks Switching
   const mode = state.mediaMode || 'lyrics';
+  const isSpaceWorkspace = state.workspaceMode === 'space';
+
+  // Show/hide top media playback decks
+  videoPlaybackDeck.classList.toggle('hidden', !(mode === 'video' && state.foregroundVideo && state.foregroundVideo.url));
+  imagePlaybackDeck.classList.toggle('hidden', !(mode === 'image' && state.currentProgramMedia && !isSpaceWorkspace));
+  biblePlaybackDeck.classList.toggle('hidden', !(mode === 'bible' && state.currentBible));
+  countdownPlaybackDeck.classList.toggle('hidden', !(mode === 'countdown' && state.countdown));
+
+  // Keep slidesGridContainer visible when in lyrics mode OR when an Espacio is open!
+  const showGrid = isSpaceWorkspace || mode === 'lyrics';
+  slidesGridContainer.classList.toggle('hidden', !showGrid);
 
   if (mode === 'video' && state.foregroundVideo && state.foregroundVideo.url) {
-    videoPlaybackDeck.classList.remove('hidden');
-    imagePlaybackDeck.classList.add('hidden');
-    biblePlaybackDeck.classList.add('hidden');
-    countdownPlaybackDeck.classList.add('hidden');
-    slidesGridContainer.classList.add('hidden');
-
     fgDeckFilename.innerText = state.foregroundVideo.filename || 'video.mp4';
     if (state.foregroundVideo.playing) {
       fgPlayIcon.innerText = '⏸';
@@ -1235,54 +1466,56 @@ function updateUI(state) {
     fgVolume.value = state.foregroundVideo.volume;
     fgVolumeLabel.innerText = `${Math.round(state.foregroundVideo.volume * 100)}%`;
 
-    livePreviewText.innerText = `🎬 [VIDEO CON AUDIO EN VIVO] ${state.foregroundVideo.filename || ''}`;
-    nextPreviewText.innerText = 'Presiona "⏹ Detener y Volver a Letras" para reanudar';
+    livePreviewText.innerText = `🎬 [VIDEO EN VIVO] ${state.foregroundVideo.filename || ''}`;
+    nextPreviewText.innerText = isSpaceWorkspace
+      ? 'Usa Siguiente ▶ o haz clic en otra tarjeta del Espacio'
+      : 'Presiona "⏹ Detener y Volver a Letras" para reanudar';
   } else if (mode === 'image' && state.currentProgramMedia) {
-    imagePlaybackDeck.classList.remove('hidden');
-    videoPlaybackDeck.classList.add('hidden');
-    biblePlaybackDeck.classList.add('hidden');
-    countdownPlaybackDeck.classList.add('hidden');
-    slidesGridContainer.classList.add('hidden');
-
     imgDeckFilename.innerText = state.currentProgramMedia.filename || 'imagen.jpg';
     imgDeckPreview.src = state.currentProgramMedia.url;
 
     livePreviewText.innerText = `🖼️ [IMAGEN EN VIVO] ${state.currentProgramMedia.filename || ''}`;
-    nextPreviewText.innerText = 'Presiona "⏹ Quitar Imagen y Volver a Letras" para reanudar';
+    nextPreviewText.innerText = isSpaceWorkspace
+      ? 'Usa Siguiente ▶ o haz clic en otra tarjeta del Espacio'
+      : 'Presiona "⏹ Quitar Imagen y Volver a Letras" para reanudar';
   } else if (mode === 'bible' && state.currentBible) {
-    biblePlaybackDeck.classList.remove('hidden');
-    videoPlaybackDeck.classList.add('hidden');
-    imagePlaybackDeck.classList.add('hidden');
-    countdownPlaybackDeck.classList.add('hidden');
-    slidesGridContainer.classList.add('hidden');
-
     bibleDeckRef.innerText = `${state.currentBible.displayRef || state.currentBible.reference} (${state.currentBible.version || 'RVR1960'})`;
     bibleDeckText.innerText = state.currentBible.text;
 
     livePreviewText.innerText = `📖 [BIBLIA] ${state.currentBible.displayRef || state.currentBible.reference}: "${state.currentBible.text.substring(0, 50)}..."`;
     nextPreviewText.innerText = 'Presiona "⏹ Quitar Versículo y Volver a Letras" para reanudar';
   } else if (mode === 'countdown' && state.countdown) {
-    countdownPlaybackDeck.classList.remove('hidden');
-    videoPlaybackDeck.classList.add('hidden');
-    imagePlaybackDeck.classList.add('hidden');
-    biblePlaybackDeck.classList.add('hidden');
-    slidesGridContainer.classList.add('hidden');
-
     countdownDeckTitle.innerText = state.countdown.title || 'EL SERVICIO COMIENZA EN';
     countdownDeckDigits.innerText = formatTime(state.countdown.remainingSeconds);
     btnCountdownDeckToggle.innerText = state.countdown.running ? '⏸ Pausar' : '▶ Iniciar';
 
     livePreviewText.innerText = `⏱️ [CONTADOR] ${state.countdown.title}: ${formatTime(state.countdown.remainingSeconds)}`;
     nextPreviewText.innerText = 'Presiona "⏹ Quitar Contador y Volver a Letras" para reanudar';
-  } else {
-    // Mode is 'lyrics'
-    videoPlaybackDeck.classList.add('hidden');
-    imagePlaybackDeck.classList.add('hidden');
-    biblePlaybackDeck.classList.add('hidden');
-    countdownPlaybackDeck.classList.add('hidden');
-    slidesGridContainer.classList.remove('hidden');
+  }
 
-    // Active Song Metadata
+  // Render Center Workspace Header & Grid (either Active Espacio OR Active Song)
+  if (isSpaceWorkspace) {
+    let activeSpace = state.currentSpace;
+    if (activePlaylist && Array.isArray(activePlaylist.items) && state.currentSpaceId) {
+      const found = activePlaylist.items.find(it => it.type === 'space' && it.id === state.currentSpaceId);
+      if (found) activeSpace = found;
+    }
+
+    if (activeSpace) {
+      const sItems = Array.isArray(activeSpace.items) ? activeSpace.items : [];
+      const imgCount = sItems.filter(i => i.mediaType === 'image').length;
+      const vidCount = sItems.filter(i => i.mediaType === 'video').length;
+
+      currentSongTitle.innerText = `🗂️ ${activeSpace.title}`;
+      currentSongArtist.innerText = `Espacio Multimedia • Repertorio: ${activePlaylist ? activePlaylist.name : ''} • Arrastra imágenes o videos abajo`;
+      badgeKey.innerText = `🖼️ Fotos: ${imgCount}`;
+      badgeBpm.innerText = `🎬 Videos: ${vidCount}`;
+      badgeCount.innerText = `${sItems.length} Archivo${sItems.length === 1 ? '' : 's'}`;
+
+      renderSpaceCards(activeSpace, state.currentSpaceSlideIndex);
+    }
+  } else {
+    // Lyrics workspace
     if (state.currentSong) {
       currentSongTitle.innerText = state.currentSong.title || 'Canción sin título';
       currentSongArtist.innerText = state.currentSong.artist || 'Sin artista';
@@ -1290,7 +1523,7 @@ function updateUI(state) {
       badgeBpm.innerText = state.currentSong.bpm ? `BPM: ${state.currentSong.bpm}` : 'BPM: -';
       badgeCount.innerText = `${(state.currentSong.slides || []).length} Diapositivas`;
     } else {
-      currentSongTitle.innerText = 'Selecciona una canción';
+      currentSongTitle.innerText = 'Selecciona una canción o espacio';
       currentSongArtist.innerText = '-';
       badgeKey.innerText = 'Key: -';
       badgeBpm.innerText = 'BPM: -';
@@ -1299,33 +1532,34 @@ function updateUI(state) {
 
     renderSlideCards(state.currentSong, state.currentSlideIndex);
 
-    // Confidence Monitor
-    let liveText = '— Pantalla Vacía —';
-    let nextText = '— Fin de Canción —';
+    if (mode === 'lyrics') {
+      let liveText = '— Pantalla Vacía —';
+      let nextText = '— Fin de Canción —';
 
-    if (state.isBlackout) {
-      liveText = '⬛ EN BLACKOUT (PANTALLA NEGRA)';
-    } else if (state.isTextCleared) {
-      liveText = '🚫 TEXTO OCULTO (SOLO FONDO)';
-    } else if (state.currentSong && state.currentSong.slides && state.currentSlideIndex >= 0) {
-      const curSlide = state.currentSong.slides[state.currentSlideIndex];
-      if (curSlide) {
-        liveText = `[${curSlide.label}] ${curSlide.text.replace(/\n/g, ' / ')}`;
-      }
-    }
-
-    if (state.currentSong && state.currentSong.slides) {
-      const nextIdx = state.currentSlideIndex + 1;
-      if (nextIdx < state.currentSong.slides.length) {
-        const nextSlide = state.currentSong.slides[nextIdx];
-        if (nextSlide) {
-          nextText = `[${nextSlide.label}] ${nextSlide.text.replace(/\n/g, ' / ')}`;
+      if (state.isBlackout) {
+        liveText = '⬛ EN BLACKOUT (PANTALLA NEGRA)';
+      } else if (state.isTextCleared) {
+        liveText = '🚫 TEXTO OCULTO (SOLO FONDO)';
+      } else if (state.currentSong && state.currentSong.slides && state.currentSlideIndex >= 0) {
+        const curSlide = state.currentSong.slides[state.currentSlideIndex];
+        if (curSlide) {
+          liveText = `[${curSlide.label}] ${curSlide.text.replace(/\n/g, ' / ')}`;
         }
       }
-    }
 
-    livePreviewText.innerText = liveText;
-    nextPreviewText.innerText = nextText;
+      if (state.currentSong && state.currentSong.slides) {
+        const nextIdx = state.currentSlideIndex + 1;
+        if (nextIdx < state.currentSong.slides.length) {
+          const nextSlide = state.currentSong.slides[nextIdx];
+          if (nextSlide) {
+            nextText = `[${nextSlide.label}] ${nextSlide.text.replace(/\n/g, ' / ')}`;
+          }
+        }
+      }
+
+      livePreviewText.innerText = liveText;
+      nextPreviewText.innerText = nextText;
+    }
   }
 
   // 4. Countdown Card Controls in Sidebar
@@ -1349,14 +1583,15 @@ function updateUI(state) {
       : '📽️ Proyectar Contador en Pantalla';
   }
 
-  // 5. Highlight active song in catalog
+  // 5. Highlight active song in catalog & Repertorio
   document.querySelectorAll('.song-item').forEach(item => {
-    if (state.mediaMode === 'lyrics' && item.dataset.id === state.currentSongId) {
+    if (!isSpaceWorkspace && state.mediaMode === 'lyrics' && item.dataset.id === state.currentSongId) {
       item.classList.add('active');
     } else {
       item.classList.remove('active');
     }
   });
+  renderPlaylistItems();
 
   // 6. Highlight active background video in sidebar
   document.querySelectorAll('.video-card-item').forEach(item => {
@@ -1365,6 +1600,122 @@ function updateUI(state) {
     } else {
       item.classList.remove('active-bg');
     }
+  });
+}
+
+// Render Espacio Multimedia Cards + Drag & Drop Zone in Center Workspace
+function renderSpaceCards(space, activeIndex) {
+  slidesGridContainer.innerHTML = '';
+  const items = Array.isArray(space.items) ? space.items : [];
+
+  // 1. Full-width Drag & Drop Banner at top of the Espacio
+  const dropBanner = document.createElement('div');
+  dropBanner.className = 'space-dropzone-banner';
+  dropBanner.innerHTML = `
+    <div class="space-dropzone-inner" id="space-center-dropzone">
+      <div class="space-dropzone-icon">📥🖼️🎬</div>
+      <div class="space-dropzone-texts">
+        <h4>Arrastra y suelta aquí tus Imágenes o Videos para "${escapeHtml(space.title)}"</h4>
+        <p>Soporta múltiples fotos (.jpg, .png, .webp) y videos (.mp4, .mov, .webm) • O haz clic para elegir archivos de tu computadora</p>
+      </div>
+      <input type="file" id="space-file-input" multiple accept="image/*,video/mp4,video/webm,video/quicktime" style="display:none">
+    </div>
+  `;
+
+  const dzInner = dropBanner.querySelector('#space-center-dropzone');
+  const fileInp = dropBanner.querySelector('#space-file-input');
+
+  dzInner.addEventListener('click', () => fileInp.click());
+
+  fileInp.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      await handleFilesDroppedIntoSpace(space, files);
+    }
+  });
+
+  dzInner.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dzInner.classList.add('drag-over');
+  });
+
+  dzInner.addEventListener('dragleave', () => {
+    dzInner.classList.remove('drag-over');
+  });
+
+  dzInner.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    dzInner.classList.remove('drag-over');
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length > 0) {
+      await handleFilesDroppedIntoSpace(space, files);
+    }
+  });
+
+  slidesGridContainer.appendChild(dropBanner);
+
+  // 2. Render each image/video card inside the Espacio
+  if (items.length === 0) {
+    const emptyHint = document.createElement('div');
+    emptyHint.style.gridColumn = '1 / -1';
+    emptyHint.style.textAlign = 'center';
+    emptyHint.style.padding = '28px';
+    emptyHint.style.color = '#94a3b8';
+    emptyHint.innerHTML = 'Este espacio aún no tiene imágenes ni videos. <strong>Arrastra archivos arriba</strong> o agrégalos desde la pestaña <strong>🖼️ Medios</strong>.';
+    slidesGridContainer.appendChild(emptyHint);
+    return;
+  }
+
+  items.forEach((mediaItem, idx) => {
+    const card = document.createElement('div');
+    const isImage = mediaItem.mediaType === 'image';
+    const isLive = appState &&
+      ((isImage && appState.mediaMode === 'image' && appState.currentProgramMedia && appState.currentProgramMedia.url === mediaItem.url) ||
+       (!isImage && appState.mediaMode === 'video' && appState.foregroundVideo && appState.foregroundVideo.url === mediaItem.url)) &&
+      idx === activeIndex;
+
+    card.className = `slide-card space-media-card ${isLive ? 'active' : ''}`;
+
+    const previewHtml = isImage
+      ? `<img src="${mediaItem.url}" class="space-card-preview" alt="${escapeHtml(mediaItem.filename)}">`
+      : `<video src="${mediaItem.url}#t=0.5" class="space-card-preview" muted preload="metadata"></video>`;
+
+    card.innerHTML = `
+      ${isLive ? '<span class="live-indicator-badge">EN VIVO</span>' : ''}
+      <div class="slide-card-header">
+        <span class="slide-section-tag ${isImage ? 'tag-verso' : 'tag-pre-coro'}">
+          ${isImage ? '🖼️ IMAGEN' : '🎬 VIDEO'}
+        </span>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="slide-num">#${idx + 1}</span>
+          <button class="btn-item-ctrl btn-item-danger btn-del-space-item" title="Quitar de este espacio" style="padding:1px 5px; font-size:0.68rem;">✕</button>
+        </div>
+      </div>
+      <div class="space-card-media-wrap">
+        ${previewHtml}
+      </div>
+      <div class="space-card-footer">
+        <span class="space-card-filename" title="${escapeHtml(mediaItem.filename || mediaItem.title)}">
+          ${escapeHtml(mediaItem.filename || mediaItem.title)}
+        </span>
+      </div>
+    `;
+
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.btn-del-space-item')) return;
+      socket.emit('go-to-space-slide', { spaceId: space.id, index: idx });
+      showToast(`📽️ Proyectando #${idx + 1}: ${mediaItem.filename || mediaItem.title}`);
+    });
+
+    card.querySelector('.btn-del-space-item').addEventListener('click', (e) => {
+      e.stopPropagation();
+      items.splice(idx, 1);
+      saveActivePlaylist();
+      socket.emit('select-space', { spaceId: space.id, space });
+      showToast('Archivo quitado del espacio');
+    });
+
+    slidesGridContainer.appendChild(card);
   });
 }
 
@@ -1422,8 +1773,7 @@ const chkAutoAdvanceBpm = document.getElementById('chk-auto-advance-bpm');
 
 if (midiStatusPill) {
   midiStatusPill.addEventListener('click', () => {
-    const settingsBtn = document.querySelector('.tab-btn[data-tab="settings"]');
-    if (settingsBtn) settingsBtn.click();
+    switchTab('settings');
   });
 }
 
@@ -1459,7 +1809,7 @@ function updateMidiEventUI(evt) {
 socket.on('init', (data) => {
   appState = data.state;
   songsList = data.songs || [];
-  backgroundVideosList = data.backgroundVideos || [];
+  backgroundVideosList = data.backgroundVideos || data.videos || [];
   programMediaList = data.programMedia || [];
   playlistsList = data.playlists || [];
   activePlaylist = data.state ? data.state.activePlaylist : (playlistsList[0] || null);
@@ -1507,6 +1857,7 @@ socket.on('state-changed', (state) => {
   }
   if (state.activePlaylist) {
     activePlaylist = state.activePlaylist;
+    renderPlaylistSelector();
     renderPlaylistItems();
   }
   updateUI(state);
@@ -1514,7 +1865,7 @@ socket.on('state-changed', (state) => {
 
 socket.on('library-updated', (data) => {
   songsList = data.songs || [];
-  backgroundVideosList = data.backgroundVideos || [];
+  backgroundVideosList = data.backgroundVideos || data.videos || [];
   programMediaList = data.programMedia || [];
   playlistsList = data.playlists || [];
 

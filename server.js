@@ -365,60 +365,77 @@ function getSongsList() {
   return songs;
 }
 
-// Background worship video loops
+// Background worship video loops (scans both ./videos and ./media)
 function getBackgroundVideosList() {
   const videoExts = ['.mp4', '.webm', '.mov', '.mkv', '.m4v'];
   const videos = [];
-  if (fs.existsSync(VIDEOS_DIR)) {
-    const files = fs.readdirSync(VIDEOS_DIR);
+  const seen = new Set();
+
+  const scanDir = (dir, prefix) => {
+    if (!fs.existsSync(dir)) return;
+    const files = fs.readdirSync(dir);
     for (const f of files) {
-      if (videoExts.includes(path.extname(f).toLowerCase())) {
+      if (videoExts.includes(path.extname(f).toLowerCase()) && !seen.has(f)) {
+        seen.add(f);
         videos.push({
           filename: f,
-          url: `/videos/${encodeURIComponent(f)}`,
-          type: 'video'
-        });
-      }
-    }
-  }
-  return videos;
-}
-
-// Standalone Program Media (Photos and Videos)
-function getProgramMediaList() {
-  const imgExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
-  const vidExts = ['.mp4', '.webm', '.mov', '.mkv'];
-  const list = [];
-
-  if (fs.existsSync(MEDIA_DIR)) {
-    const files = fs.readdirSync(MEDIA_DIR);
-    for (const f of files) {
-      const ext = path.extname(f).toLowerCase();
-      if (imgExts.includes(ext)) {
-        list.push({
-          filename: f,
           title: path.parse(f).name.replace(/[-_]/g, ' '),
-          url: `/media-store/${encodeURIComponent(f)}`,
-          mediaType: 'image'
-        });
-      } else if (vidExts.includes(ext)) {
-        list.push({
-          filename: f,
-          title: path.parse(f).name.replace(/[-_]/g, ' '),
-          url: `/media-store/${encodeURIComponent(f)}`,
+          url: `${prefix}/${encodeURIComponent(f)}`,
+          type: 'video',
           mediaType: 'video'
         });
       }
     }
-  }
+  };
+
+  scanDir(VIDEOS_DIR, '/videos');
+  scanDir(MEDIA_DIR, '/media-store');
+  return videos;
+}
+
+// Standalone Program Media (Photos and Videos from both ./media and ./videos)
+function getProgramMediaList() {
+  const imgExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
+  const vidExts = ['.mp4', '.webm', '.mov', '.mkv', '.m4v'];
+  const list = [];
+  const seen = new Set();
+
+  const scanDir = (dir, prefix) => {
+    if (!fs.existsSync(dir)) return;
+    const files = fs.readdirSync(dir);
+    for (const f of files) {
+      if (seen.has(f)) continue;
+      const ext = path.extname(f).toLowerCase();
+      if (imgExts.includes(ext)) {
+        seen.add(f);
+        list.push({
+          filename: f,
+          title: path.parse(f).name.replace(/[-_]/g, ' '),
+          url: `${prefix}/${encodeURIComponent(f)}`,
+          mediaType: 'image'
+        });
+      } else if (vidExts.includes(ext)) {
+        seen.add(f);
+        list.push({
+          filename: f,
+          title: path.parse(f).name.replace(/[-_]/g, ' '),
+          url: `${prefix}/${encodeURIComponent(f)}`,
+          mediaType: 'video'
+        });
+      }
+    }
+  };
+
+  scanDir(MEDIA_DIR, '/media-store');
+  scanDir(VIDEOS_DIR, '/videos');
   return list;
 }
 
-// Playlists
+// Playlists / Repertorios
 function getPlaylistsList() {
   const list = [];
   if (fs.existsSync(PLAYLISTS_DIR)) {
-    const files = fs.readdirSync(PLAYLISTS_DIR);
+    const files = fs.readdirSync(PLAYLISTS_DIR).sort();
     for (const f of files) {
       if (f.endsWith('.json')) {
         try {
@@ -432,17 +449,20 @@ function getPlaylistsList() {
 }
 
 function loadInitialPlaylist() {
-  const defaultPath = path.join(PLAYLISTS_DIR, 'servicio_sanacion.json');
-  if (fs.existsSync(defaultPath)) {
-    try {
-      return JSON.parse(fs.readFileSync(defaultPath, 'utf-8'));
-    } catch (e) {}
+  const preferredFiles = ['17_10_2026.json', 'servicio_sanacion.json'];
+  for (const fname of preferredFiles) {
+    const p = path.join(PLAYLISTS_DIR, fname);
+    if (fs.existsSync(p)) {
+      try {
+        return JSON.parse(fs.readFileSync(p, 'utf-8'));
+      } catch (e) {}
+    }
   }
   const all = getPlaylistsList();
   if (all.length > 0) return all[0];
   return {
-    id: 'default_playlist',
-    name: 'Lista de Servicio',
+    id: '17_10_2026',
+    name: '17/10/2026',
     items: []
   };
 }
@@ -450,9 +470,13 @@ function loadInitialPlaylist() {
 // ProPresenter global state
 let presenterState = {
   mediaMode: 'lyrics', // 'lyrics' | 'video' | 'image' | 'bible' | 'countdown'
+  workspaceMode: 'lyrics', // 'lyrics' | 'space'
   currentSongId: null,
   currentSong: null,
   currentSlideIndex: -1,
+  currentSpaceId: null,
+  currentSpace: null,
+  currentSpaceSlideIndex: -1,
   isBlackout: false,
   isTextCleared: false,
   currentVideo: null, // worship background loop behind slides
@@ -778,6 +802,39 @@ function resetCountdown() {
   broadcastState();
 }
 
+// Helper to project a media item (image or video)
+function projectMediaItem(mediaItem) {
+  if (!mediaItem) return;
+  const mType = mediaItem.mediaType || (/\.(mp4|webm|mov|mkv|m4v)$/i.test(mediaItem.filename || mediaItem.url || '') ? 'video' : 'image');
+  if (mType === 'image') {
+    presenterState.mediaMode = 'image';
+    presenterState.currentProgramMedia = {
+      url: mediaItem.url,
+      filename: mediaItem.filename || mediaItem.title || path.basename(mediaItem.url),
+      title: mediaItem.title || mediaItem.filename,
+      mediaType: 'image'
+    };
+    presenterState.foregroundVideo.playing = false;
+    presenterState.isTextCleared = false;
+  } else {
+    presenterState.mediaMode = 'video';
+    presenterState.currentProgramMedia = {
+      url: mediaItem.url,
+      filename: mediaItem.filename || mediaItem.title || path.basename(mediaItem.url),
+      title: mediaItem.title || mediaItem.filename,
+      mediaType: 'video'
+    };
+    presenterState.foregroundVideo.url = mediaItem.url;
+    presenterState.foregroundVideo.filename = mediaItem.filename || mediaItem.title || path.basename(mediaItem.url);
+    presenterState.foregroundVideo.playing = true;
+    presenterState.foregroundVideo.volume = 1.0;
+    presenterState.foregroundVideo.muted = false;
+    presenterState.foregroundVideo.currentTime = 0;
+    presenterState.foregroundVideo.loop = !!mediaItem.loop;
+    presenterState.isTextCleared = false;
+  }
+}
+
 // Broadcasts
 function broadcastLibraryUpdate() {
   const songs = getSongsList();
@@ -790,8 +847,14 @@ function broadcastLibraryUpdate() {
     if (updated) presenterState.currentSong = updated;
   }
 
+  if (presenterState.currentSpaceId && presenterState.activePlaylist && Array.isArray(presenterState.activePlaylist.items)) {
+    const updatedSpace = presenterState.activePlaylist.items.find(it => it.type === 'space' && it.id === presenterState.currentSpaceId);
+    if (updatedSpace) presenterState.currentSpace = updatedSpace;
+  }
+
   io.emit('library-updated', {
     songs,
+    videos: backgroundVideos,
     backgroundVideos,
     programMedia,
     playlists,
@@ -859,6 +922,7 @@ app.post('/api/tunnel/stop', async (req, res) => {
 });
 
 app.get('/api/songs', (req, res) => res.json(getSongsList()));
+app.get('/api/videos', (req, res) => res.json(getBackgroundVideosList()));
 app.get('/api/background-videos', (req, res) => res.json(getBackgroundVideosList()));
 app.get('/api/media', (req, res) => res.json(getProgramMediaList()));
 app.get('/api/playlists', (req, res) => res.json(getPlaylistsList()));
@@ -868,7 +932,7 @@ app.post('/api/playlists', (req, res) => {
   const { id, name, items } = req.body;
   if (!name) return res.status(400).json({ error: 'Name is required' });
 
-  const safeId = (id || name.toLowerCase().replace(/[^a-z0-9]/g, '_'));
+  const safeId = (id || name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')) || `repertorio_${Date.now()}`;
   const playlistObj = {
     id: safeId,
     name,
@@ -997,11 +1061,22 @@ app.post('/api/songs', (req, res) => {
 
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const folder = path.basename(req.file.destination);
+  const ext = path.extname(req.file.filename).toLowerCase();
+  const isVideo = ['.mp4', '.webm', '.mov', '.mkv', '.m4v'].includes(ext);
+  const isImage = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'].includes(ext);
+  const prefix = folder === 'videos' ? '/videos' : (folder === 'media' ? '/media-store' : '/songs-media');
+  const url = `${prefix}/${encodeURIComponent(req.file.filename)}`;
+  const mediaType = isVideo ? 'video' : (isImage ? 'image' : 'file');
+
   broadcastLibraryUpdate();
   res.json({
     success: true,
     file: req.file.filename,
-    folder: path.basename(req.file.destination)
+    title: path.parse(req.file.filename).name.replace(/[-_]/g, ' '),
+    folder,
+    url,
+    mediaType
   });
 });
 
@@ -1014,10 +1089,12 @@ io.on('connection', (socket) => {
     presenterState.connectedOperators++;
   }
 
+  const bgVideos = getBackgroundVideosList();
   socket.emit('init', {
     state: presenterState,
     songs: getSongsList(),
-    backgroundVideos: getBackgroundVideosList(),
+    videos: bgVideos,
+    backgroundVideos: bgVideos,
     programMedia: getProgramMediaList(),
     playlists: getPlaylistsList(),
     canonicalBooks: CANONICAL_BOOKS,
@@ -1037,17 +1114,64 @@ io.on('connection', (socket) => {
     const songs = getSongsList();
     const song = songs.find(s => s.id === data.songId);
     if (song) {
+      presenterState.workspaceMode = 'lyrics';
       presenterState.mediaMode = 'lyrics';
       presenterState.currentSongId = song.id;
       presenterState.currentSong = song;
       presenterState.currentSlideIndex = typeof data.slideIndex === 'number' ? data.slideIndex : 0;
       presenterState.isTextCleared = false;
+      presenterState.foregroundVideo.playing = false;
       broadcastState();
     }
   });
 
+  // Repertorio Space ("Espacio") controls
+  socket.on('select-space', (data) => {
+    if (!data || !data.spaceId) return;
+    const items = (presenterState.activePlaylist && presenterState.activePlaylist.items) || [];
+    const space = items.find(it => it.type === 'space' && it.id === data.spaceId) || data.space;
+    if (space) {
+      presenterState.workspaceMode = 'space';
+      presenterState.currentSpaceId = space.id;
+      presenterState.currentSpace = space;
+      const spaceItems = space.items || [];
+      if (typeof data.slideIndex === 'number' && data.slideIndex >= 0 && spaceItems[data.slideIndex]) {
+        presenterState.currentSpaceSlideIndex = data.slideIndex;
+        projectMediaItem(spaceItems[data.slideIndex]);
+      } else if (data.autoProjectFirst && spaceItems.length > 0) {
+        presenterState.currentSpaceSlideIndex = 0;
+        projectMediaItem(spaceItems[0]);
+      } else {
+        presenterState.currentSpaceSlideIndex = -1;
+      }
+      broadcastState();
+    }
+  });
+
+  socket.on('go-to-space-slide', (data) => {
+    if (!presenterState.currentSpace && data && data.spaceId && presenterState.activePlaylist) {
+      presenterState.currentSpace = (presenterState.activePlaylist.items || []).find(
+        it => it.type === 'space' && it.id === data.spaceId
+      );
+      if (presenterState.currentSpace) presenterState.currentSpaceId = presenterState.currentSpace.id;
+    }
+    if (!presenterState.currentSpace || !Array.isArray(presenterState.currentSpace.items)) return;
+    const spaceItems = presenterState.currentSpace.items;
+    if (spaceItems.length === 0) return;
+
+    let idx = parseInt(data.index, 10);
+    if (isNaN(idx) || idx < 0) idx = 0;
+    if (idx >= spaceItems.length) idx = spaceItems.length - 1;
+
+    presenterState.workspaceMode = 'space';
+    presenterState.currentSpaceSlideIndex = idx;
+    projectMediaItem(spaceItems[idx]);
+    broadcastState();
+  });
+
   socket.on('go-to-slide', (data) => {
     if (!presenterState.currentSong) return;
+    presenterState.workspaceMode = 'lyrics';
     presenterState.mediaMode = 'lyrics';
     const maxIdx = presenterState.currentSong.slides.length - 1;
     let idx = parseInt(data.index, 10);
@@ -1061,6 +1185,15 @@ io.on('connection', (socket) => {
   });
 
   socket.on('next-slide', () => {
+    if (presenterState.workspaceMode === 'space' && presenterState.currentSpace && Array.isArray(presenterState.currentSpace.items)) {
+      const spaceItems = presenterState.currentSpace.items;
+      if (spaceItems.length > 0 && presenterState.currentSpaceSlideIndex < spaceItems.length - 1) {
+        presenterState.currentSpaceSlideIndex++;
+        projectMediaItem(spaceItems[presenterState.currentSpaceSlideIndex]);
+        broadcastState();
+      }
+      return;
+    }
     if (presenterState.mediaMode !== 'lyrics') return;
     if (!presenterState.currentSong) return;
     const slides = presenterState.currentSong.slides;
@@ -1072,6 +1205,15 @@ io.on('connection', (socket) => {
   });
 
   socket.on('prev-slide', () => {
+    if (presenterState.workspaceMode === 'space' && presenterState.currentSpace && Array.isArray(presenterState.currentSpace.items)) {
+      const spaceItems = presenterState.currentSpace.items;
+      if (spaceItems.length > 0 && presenterState.currentSpaceSlideIndex > 0) {
+        presenterState.currentSpaceSlideIndex--;
+        projectMediaItem(spaceItems[presenterState.currentSpaceSlideIndex]);
+        broadcastState();
+      }
+      return;
+    }
     if (presenterState.mediaMode !== 'lyrics') return;
     if (!presenterState.currentSong) return;
     if (presenterState.currentSlideIndex > 0) {
@@ -1100,23 +1242,13 @@ io.on('connection', (socket) => {
 
   // Program Media Projection (Image or Video)
   socket.on('project-media', (data) => {
-    if (data.mediaType === 'image') {
-      presenterState.mediaMode = 'image';
-      presenterState.currentProgramMedia = data;
-      presenterState.isTextCleared = false;
-      broadcastState();
-    } else if (data.mediaType === 'video') {
-      presenterState.mediaMode = 'video';
-      presenterState.currentProgramMedia = data;
-      presenterState.foregroundVideo.url = data.url;
-      presenterState.foregroundVideo.filename = data.filename || path.basename(data.url);
-      presenterState.foregroundVideo.playing = true;
-      presenterState.foregroundVideo.volume = 1.0;
-      presenterState.foregroundVideo.muted = false;
-      presenterState.foregroundVideo.currentTime = 0;
-      presenterState.foregroundVideo.loop = !!data.loop;
-      broadcastState();
+    if (data && data.spaceId && typeof data.slideIndex === 'number') {
+      presenterState.workspaceMode = 'space';
+      presenterState.currentSpaceId = data.spaceId;
+      presenterState.currentSpaceSlideIndex = data.slideIndex;
     }
+    projectMediaItem(data);
+    broadcastState();
   });
 
   socket.on('stop-foreground-video', () => {
@@ -1197,6 +1329,12 @@ io.on('connection', (socket) => {
   // Playlist management via Socket
   socket.on('update-active-playlist', (playlist) => {
     presenterState.activePlaylist = playlist;
+    if (presenterState.currentSpaceId && Array.isArray(playlist.items)) {
+      const updatedSpace = playlist.items.find(it => it.type === 'space' && it.id === presenterState.currentSpaceId);
+      if (updatedSpace) {
+        presenterState.currentSpace = updatedSpace;
+      }
+    }
     const pPath = path.join(PLAYLISTS_DIR, `${playlist.id}.json`);
     fs.writeFileSync(pPath, JSON.stringify(playlist, null, 2), 'utf-8');
     broadcastState();

@@ -134,38 +134,43 @@
   <div id="new-song-modal" class="modal-overlay hidden">
     <div class="modal-card modal-large">
       <div class="modal-header">
-        <h3>➕ Agregar o Editar Canción</h3>
+        <h3>➕ Crear Canción</h3>
         <button class="modal-close" id="btn-close-song-modal">&times;</button>
       </div>
       <div class="modal-body">
         <div class="form-row">
           <div class="form-group">
             <label>Título de la Canción:</label>
-            <input type="text" id="input-song-title" placeholder="Ej. Jesucristo Basta">
+            <input type="text" id="input-song-title" placeholder="Ej. Glorioso Día">
           </div>
           <div class="form-group">
             <label>Artista / Grupo:</label>
-            <input type="text" id="input-song-artist" placeholder="Ej. Un Corazón">
+            <input type="text" id="input-song-artist" placeholder="Ej. Phil Wickham / Elevation Worship">
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label>Tonalidad (Key):</label>
-            <input type="text" id="input-song-key" placeholder="Ej. Ab, G, C, D">
+            <input type="text" id="input-song-key" placeholder="Ej. D, C, Ab, G">
           </div>
           <div class="form-group">
             <label>Tempo (BPM):</label>
-            <input type="text" id="input-song-bpm" placeholder="Ej. 69, 72, 130">
+            <input type="text" id="input-song-bpm" placeholder="Ej. 110, 73, 74, 68">
           </div>
         </div>
         <div class="form-group">
           <label>Contenido y Diapositivas (usa [Verso 1], [Coro], etc.):</label>
-          <textarea id="input-song-content" rows="11" placeholder="[Verso 1]
-Nuestros corazones insaciables son...
+          <textarea id="input-song-content" rows="10" placeholder="[Verso 1]
+Mi vergüenza sepultó...
 
 [Coro]
-Jesucristo basta, Jesucristo basta..."></textarea>
+De la muerte me rescató
+Glorioso día..."></textarea>
         </div>
+        <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#38bdf8; font-weight:600; cursor:pointer; margin-top:4px;">
+          <input type="checkbox" id="chk-add-song-to-repertorio" checked>
+          <span>Agregar automáticamente al Repertorio activo (<span id="lbl-active-repertorio-song">17/10/2026</span>)</span>
+        </label>
         <div class="modal-actions">
           <button id="btn-save-song" class="action-btn btn-primary">💾 Guardar Canción</button>
         </div>
@@ -173,21 +178,45 @@ Jesucristo basta, Jesucristo basta..."></textarea>
     </div>
   </div>
 
-  <!-- New Playlist Modal -->
+  <!-- New Repertorio Modal -->
   <div id="new-playlist-modal" class="modal-overlay hidden">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>📜 Crear Nueva Playlist de Servicio</h3>
+        <h3>🎵 Crear Nuevo Repertorio</h3>
         <button class="modal-close" id="btn-close-playlist-modal">&times;</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label>Nombre del Servicio / Playlist:</label>
-          <input type="text" id="input-playlist-name" placeholder="Ej. Servicio Domingo Noche">
+          <label>Título o Fecha del Repertorio:</label>
+          <input type="text" id="input-playlist-name" placeholder="Ej. 17/10/2026">
         </div>
         <div class="modal-actions" style="margin-top:14px;">
           <button id="btn-save-new-playlist" class="action-btn btn-primary" style="width:100%; justify-content:center;">
-            Crear Playlist
+            ✨ Crear Repertorio
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Espacio Multimedia Modal -->
+  <div id="new-space-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🗂️ Nuevo Espacio (Imágenes y Videos)</h3>
+        <button class="modal-close" id="btn-close-space-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.8rem; color:#94a3b8;">
+          Un <strong>Espacio</strong> funciona igual que una canción dentro de tu Repertorio, pero contiene imágenes o videos que arrastres para proyectarlos en orden.
+        </p>
+        <div class="form-group">
+          <label>Nombre del Espacio:</label>
+          <input type="text" id="input-space-title" placeholder="Ej. Bienvenida, Anuncios, Predicación, Video Especial...">
+        </div>
+        <div class="modal-actions" style="margin-top:14px;">
+          <button id="btn-save-new-space" class="action-btn btn-primary" style="width:100%; justify-content:center;">
+            🗂️ Crear Espacio y Abrir para Arrastrar Archivos
           </button>
         </div>
       </div>
@@ -220,30 +249,43 @@ Jesucristo basta, Jesucristo basta..."></textarea>
     <!-- Left Sidebar: ProPresenter Sections -->
     <aside class="sidebar">
       <div class="sidebar-tabs">
-        <button class="tab-btn active" id="tab-playlist-btn" title="Orden del Culto">📜 Playlist</button>
+        <button class="tab-btn active" id="tab-playlist-btn" title="Repertorio del Servicio">🎵 Repertorio</button>
         <button class="tab-btn" id="tab-songs-btn" title="Catálogo de Canciones">📚 Canciones</button>
         <button class="tab-btn" id="tab-media-btn" title="Fotos y Videos del Programa">🖼️ Medios</button>
         <button class="tab-btn" id="tab-bible-btn" title="Lectura y Proyección Bíblica">📖 Biblia</button>
         <button class="tab-btn" id="tab-countdown-btn" title="Reloj Contador de Inicio">⏱️ Contador</button>
-        <button class="tab-btn" id="tab-videos-btn" title="Fondos de Alabanza">🎬 Fondos</button>
+        <button class="tab-btn" id="tab-videos-btn" title="Fondos y Videos">🎬 Videos</button>
         <button class="tab-btn" id="tab-settings-btn" title="Ajustes de Proyección">⚙️ Ajustes</button>
       </div>
 
-      <!-- TAB 1: PLAYLIST / ORDEN DE SERVICIO -->
+      <!-- TAB 1: REPERTORIO / ORDEN DE SERVICIO -->
       <div class="tab-panel active" id="tab-playlist-panel">
         <div class="panel-section-header">
           <div class="playlist-header-top">
-            <label style="font-size:0.75rem; color:#94a3b8; font-weight:700;">PLAYLIST ACTIVA:</label>
-            <div class="playlist-select-row">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <label style="font-size:0.75rem; color:#38bdf8; font-weight:800;">REPERTORIO ACTIVO:</label>
+              <button id="btn-new-playlist" class="link-btn" style="font-weight:700; text-decoration:none;">+ Nuevo Repertorio</button>
+            </div>
+            <div class="playlist-select-row" style="margin-top:4px;">
               <select id="playlist-select" class="control-select">
                 <!-- Populated dynamically -->
               </select>
-              <button id="btn-new-playlist" class="icon-btn-sm" title="Crear nueva playlist">+</button>
             </div>
           </div>
+
+          <!-- Quick Add Buttons inside Repertorio -->
+          <div class="repertorio-create-bar" style="display:flex; gap:6px; margin-top:10px;">
+            <button id="btn-repertorio-add-song" class="action-btn btn-sm btn-primary" style="flex:1; justify-content:center; padding:7px 8px; font-size:0.76rem;" title="Crear o agregar una canción a este repertorio">
+              ➕ Canción
+            </button>
+            <button id="btn-repertorio-add-space" class="action-btn btn-sm btn-accent" style="flex:1.15; justify-content:center; padding:7px 8px; font-size:0.76rem;" title="Crear un espacio donde arrastrar imágenes o videos">
+              🗂️ + Espacio (Fotos/Video)
+            </button>
+          </div>
+
           <div class="playlist-stats-row">
             <span id="playlist-items-count" class="badge-count-pill">0 Elementos</span>
-            <span class="sub-label">Haz clic para proyectar</span>
+            <span class="sub-label">Clic para abrir / proyectar</span>
           </div>
         </div>
 
@@ -252,7 +294,7 @@ Jesucristo basta, Jesucristo basta..."></textarea>
         </div>
 
         <div class="panel-footer-actions">
-          <small style="color:#64748b; font-size:0.72rem;">💡 Agrega elementos a esta playlist desde Canciones, Medios, Biblia o Contador.</small>
+          <small style="color:#94a3b8; font-size:0.72rem;">💡 Crea <strong>Canciones</strong> o <strong>Espacios</strong> arriba, o agrega desde el catálogo.</small>
         </div>
       </div>
 
@@ -271,7 +313,7 @@ Jesucristo basta, Jesucristo basta..."></textarea>
       <div class="tab-panel" id="tab-media-panel">
         <div class="panel-section-header">
           <div style="font-size:0.78rem; font-weight:700; color:#38bdf8;">FOTOS Y VIDEOS DEL SERVICIO</div>
-          <small style="color:#94a3b8; font-size:0.72rem;">Anuncios, flyers, testimonios y videos especiales con audio.</small>
+          <small style="color:#94a3b8; font-size:0.72rem;">Todos tus videos (.mp4) e imágenes (.jpg/.png) listos para proyectar o arrastrar.</small>
         </div>
 
         <div class="media-filter-bar">
@@ -284,10 +326,10 @@ Jesucristo basta, Jesucristo basta..."></textarea>
           <!-- Populated dynamically -->
         </div>
 
-        <div class="upload-box">
+        <div class="upload-box" id="media-upload-dropzone">
           <label class="upload-label">
-            📁 Subir Foto o Video (.jpg/.png/.mp4)
-            <input type="file" id="input-media-upload" accept="image/*,video/mp4,video/webm,video/quicktime" style="display:none">
+            📥 Arrastra o sube Fotos y Videos (.jpg/.png/.mp4)
+            <input type="file" id="input-media-upload" multiple accept="image/*,video/mp4,video/webm,video/quicktime" style="display:none">
           </label>
         </div>
       </div>

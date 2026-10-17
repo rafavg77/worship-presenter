@@ -1,0 +1,58 @@
+{
+  "id": "17_10_2026",
+  "name": "17/10/2026",
+  "updatedAt": "2026-10-16T23:00:00.000Z",
+  "items": [
+    {
+      "id": "space_bienvenida",
+      "type": "space",
+      "title": "Bienvenida y Anuncios",
+      "items": [
+        {
+          "id": "item_bienvenida_img",
+          "title": "Bienvenida Sanación",
+          "filename": "bienvenida_sanacion.jpg",
+          "url": "/media-store/bienvenida_sanacion.jpg",
+          "mediaType": "image"
+        },
+        {
+          "id": "item_whatsapp_vid",
+          "title": "WhatsApp Video 2026-10-10 at 4.44.14 PM.mp4",
+          "filename": "WhatsApp Video 2026-10-10 at 4.44.14 PM.mp4",
+          "url": "/media-store/WhatsApp%20Video%202026-10-10%20at%204.44.14%20PM.mp4",
+          "mediaType": "video"
+        }
+      ]
+    },
+    {
+      "type": "song",
+      "songId": "01-glorioso-dia",
+      "title": "Glorioso Día",
+      "artist": "Phil Wickham / Passion"
+    },
+    {
+      "type": "song",
+      "songId": "02-mismo-dios",
+      "title": "Mismo Dios",
+      "artist": "Elevation Worship"
+    },
+    {
+      "type": "song",
+      "songId": "03-confio-en-dios",
+      "title": "Confío En Dios",
+      "artist": "Elevation Español"
+    },
+    {
+      "type": "song",
+      "songId": "04-suelto",
+      "title": "Suelto",
+      "artist": "Sarai Rivera"
+    },
+    {
+      "id": "space_cierre",
+      "type": "space",
+      "title": "Ofrenda / Anuncios Finales",
+      "items": []
+    }
+  ]
+}
