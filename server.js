@@ -365,31 +365,25 @@ function getSongsList() {
   return songs;
 }
 
-// Background worship video loops (scans both ./videos and ./media)
+// Background worship video loops (strictly from ./videos sorted alphabetically)
 function getBackgroundVideosList() {
   const videoExts = ['.mp4', '.webm', '.mov', '.mkv', '.m4v'];
   const videos = [];
-  const seen = new Set();
 
-  const scanDir = (dir, prefix) => {
-    if (!fs.existsSync(dir)) return;
-    const files = fs.readdirSync(dir);
+  if (fs.existsSync(VIDEOS_DIR)) {
+    const files = fs.readdirSync(VIDEOS_DIR).sort();
     for (const f of files) {
-      if (videoExts.includes(path.extname(f).toLowerCase()) && !seen.has(f)) {
-        seen.add(f);
+      if (videoExts.includes(path.extname(f).toLowerCase())) {
         videos.push({
           filename: f,
-          title: path.parse(f).name.replace(/[-_]/g, ' '),
-          url: `${prefix}/${encodeURIComponent(f)}`,
+          title: path.parse(f).name.replace(/^[0-9]+[-_]?/, '').replace(/[-_]/g, ' '),
+          url: `/videos/${encodeURIComponent(f)}`,
           type: 'video',
           mediaType: 'video'
         });
       }
     }
-  };
-
-  scanDir(VIDEOS_DIR, '/videos');
-  scanDir(MEDIA_DIR, '/media-store');
+  }
   return videos;
 }
 
@@ -1112,7 +1106,8 @@ io.on('connection', (socket) => {
   // Song controls
   socket.on('select-song', (data) => {
     const songs = getSongsList();
-    const song = songs.find(s => s.id === data.songId);
+    const songIdx = songs.findIndex(s => s.id === data.songId);
+    const song = songs[songIdx];
     if (song) {
       presenterState.workspaceMode = 'lyrics';
       presenterState.mediaMode = 'lyrics';
@@ -1121,6 +1116,16 @@ io.on('connection', (socket) => {
       presenterState.currentSlideIndex = typeof data.slideIndex === 'number' ? data.slideIndex : 0;
       presenterState.isTextCleared = false;
       presenterState.foregroundVideo.playing = false;
+
+      // Pick a cool worship motion background loop from ./videos (01..05)
+      if (presenterState.currentVideo !== null && !presenterState.manualBgOverride) {
+        const bgList = getBackgroundVideosList();
+        const hdLoops = bgList.filter(v => /^[0-9]+_fondo_/.test(v.filename));
+        const pool = hdLoops.length > 0 ? hdLoops : bgList;
+        if (pool.length > 0) {
+          presenterState.currentVideo = pool[songIdx % pool.length].url;
+        }
+      }
       broadcastState();
     }
   });
